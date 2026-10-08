@@ -140,3 +140,26 @@ export function normalizeStyleCategory(
 
   return null;
 }
+
+export type ProductGender = 'MEN' | 'WOMEN';
+
+/**
+ * Normalizes product gender based on category, title, description, and specs.
+ */
+export function normalizeProductGender(
+  product: Partial<Product> | null | undefined
+): ProductGender {
+  if (!product) return 'MEN';
+
+  const category = (product.category || '').toLowerCase();
+  const title = (product.title || '').toLowerCase();
+  const description = (product.description || '').toLowerCase();
+  const specs = (product.specs || []).map((s) => `${s.label}:${s.value}`).join(' ').toLowerCase();
+  const allText = `${category} ${title} ${description} ${specs}`;
+
+  if (/\b(women|women's|woman|ladies|lady|female|girls|girl|kurti|saree|lehenga|skirt|blouse)\b/i.test(allText)) {
+    return 'WOMEN';
+  }
+
+  return 'MEN';
+}

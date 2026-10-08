@@ -2,464 +2,376 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import {
-  ArrowLeft,
-  Sparkles,
-  Shirt,
-  ShoppingBag,
-  Footprints,
-  Watch,
-  Plus,
-  ArrowRight,
-  RefreshCw,
-  Wand2,
-  CheckCircle2,
-  Layers,
-  ChevronRight,
-} from 'lucide-react';
 import { initialProducts, Product } from '../../data';
 import { supabase } from '../../lib/supabase';
-import {
-  normalizeStyleCategory,
-  StyleCategory,
-  STYLE_CATEGORIES,
-} from '../../lib/categories';
-import OutfitModelViewer from './OutfitModelViewer';
-import ProductSelectModal from './ProductSelectModal';
-import OutfitSummary from './OutfitSummary';
+import { StyleCategory, ProductGender, normalizeStyleCategory, normalizeProductGender } from '../../lib/categories';
+import { StyleSlotState, OutfitState, recommendMatchingPieces, deduplicateProducts, generateVirtualTryOn } from '../../lib/styling';
 
-const CATEGORY_ICONS: Record<StyleCategory, React.ComponentType<{ size?: number; className?: string }>> = {
-  TOP: Shirt,
-  BOTTOM: ShoppingBag,
-  SHOES: Footprints,
-  ACCESSORY: Watch,
+import GenderSelector from './GenderSelector';
+import OutfitModelView from './OutfitModelView';
+import CategoryStepSelector from './CategoryStepSelector';
+import OutfitSummary from './OutfitSummary';
+import CompleteTheLook from './CompleteTheLook';
+import ProductPickerModal from './ProductPickerModal';
+
+import { Sparkles, ArrowLeft, RotateCcw, ShieldCheck, Shirt, AlertCircle } from 'lucide-react';
+
+const INITIAL_SLOTS: Record<StyleCategory, StyleSlotState> = {
+  TOP: { category: 'TOP', product: null, isLocked: false },
+  BOTTOM: { category: 'BOTTOM', product: null, isLocked: false },
+  SHOES: { category: 'SHOES', product: null, isLocked: false },
+  ACCESSORY: { category: 'ACCESSORY', product: null, isLocked: false },
 };
 
-export default function StylePage() {
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [topId, setTopId] = useState<string>('jack-jones-12290084-mid-blue');
-  const [bottomId, setBottomId] = useState<string>('');
-  const [shoesId, setShoesId] = useState<string>('');
-  const [accessoryId, setAccessoryId] = useState<string>('');
+export default function CreateStylePage() {
+  const [catalog, setCatalog] = useState<Product[]>(initialProducts);
+  const [gender, setGender] = useState<ProductGender>('MEN');
+  const [slots, setSlots] = useState<Record<StyleCategory, StyleSlotState>>(() => {
+    const defaultTop = initialProducts[0] || null;
+    return {
+      TOP: { category: 'TOP', product: defaultTop, isLocked: true },
+      BOTTOM: { category: 'BOTTOM', product: null, isLocked: false },
+      SHOES: { category: 'SHOES', product: null, isLocked: false },
+      ACCESSORY: { category: 'ACCESSORY', product: null, isLocked: false },
+    };
+  });
+  const [activePickerCategory, setActivePickerCategory] = useState<StyleCategory | null>(null);
+  const [completeLookSuggestions, setCompleteLookSuggestions] = useState<
+    { product: Product; category: StyleCategory; reason: string }[]
+  >([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(false);
 
-  // Modal selector state
-  const [activeModalCategory, setActiveModalCategory] = useState<StyleCategory | null>(null);
-
-  // Load catalog from Supabase or localStorage with strict deduplication
+  // 1. Load genuine catalog from Supabase or localStorage or fallback to initialProducts
   useEffect(() => {
-    let mounted = true;
-    const loadProducts = async () => {
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('products')
-            .select('*')
-            .eq('published', true)
-            .order('created_at', { ascending: false });
+    async function loadCatalog() {
+      setIsCatalogLoading(true);
+      try {
+        let products: Product[] = [];
 
-          if (!error && data?.length && mounted) {
-            const map = new Map<string, Product>();
-            [...initialProducts, ...(data as Product[])].forEach((p) => map.set(p.id, p));
-            setProducts([...map.values()]);
+        // Check Supabase if configured
+        if (supabase) {
+          const { data, error } = await supabase.from('products').select('*');
+          if (!error && data && data.length > 0) {
+            products = data as Product[];
           }
-        } catch (err) {
-          console.error('Failed to load Supabase products:', err);
         }
-      } else {
-        try {
-          const stored = localStorage.getItem('fashionfind-products');
-          if (stored && mounted) {
-            const parsed = JSON.parse(stored) as Product[];
-            const map = new Map<string, Product>();
-            [...initialProducts, ...parsed].forEach((p) => map.set(p.id, p));
-            setProducts([...map.values()]);
+
+        // Check localStorage admin products
+        if (products.length === 0 && typeof window !== 'undefined') {
+          const stored = localStorage.getItem('fashionfind_products');
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                products = parsed;
+              }
+            } catch (e) {
+              console.error('Failed to parse localStorage products', e);
+            }
           }
-        } catch (err) {
-          console.error('Failed to load local products:', err);
         }
+
+        // Fallback to genuine initialProducts
+        if (products.length === 0) {
+          products = initialProducts;
+        }
+
+        const deduped = deduplicateProducts(products);
+        setCatalog(deduped);
+      } catch (err) {
+        console.error('Catalog load error', err);
+        setCatalog(deduplicateProducts(initialProducts));
+      } finally {
+        setIsCatalogLoading(false);
       }
-    };
+    }
 
-    loadProducts();
-    return () => {
-      mounted = false;
-    };
+    loadCatalog();
   }, []);
 
-  // Deduplicate products strictly by product.id
-  const uniqueProducts = useMemo(() => {
-    const map = new Map<string, Product>();
-    products.forEach((p) => {
-      if (p.id && !map.has(p.id)) {
-        map.set(p.id, p);
+  // 2. Initialize or Update Outfit when Catalog or Gender changes
+  useEffect(() => {
+    if (catalog.length === 0) return;
+
+    // Filter catalog for current gender
+    const genderCatalog = catalog.filter((p) => normalizeProductGender(p) === gender);
+
+    // Find default Top for this gender
+    const tops = genderCatalog.filter((p) => normalizeStyleCategory(p) === 'TOP');
+    const defaultTop = tops.length > 0 ? tops[0] : null;
+
+    const newSlots: Record<StyleCategory, StyleSlotState> = {
+      TOP: {
+        category: 'TOP',
+        product: defaultTop,
+        isLocked: true, // Default top is the user's primary selection anchor
+      },
+      BOTTOM: { category: 'BOTTOM', product: null, isLocked: false },
+      SHOES: { category: 'SHOES', product: null, isLocked: false },
+      ACCESSORY: { category: 'ACCESSORY', product: null, isLocked: false },
+    };
+
+    if (defaultTop) {
+      const recs = recommendMatchingPieces({
+        selectedProduct: defaultTop,
+        catalog,
+        gender,
+        currentSlots: newSlots,
+      });
+
+      for (const [cat, rec] of Object.entries(recs.recommendedSlots)) {
+        if (rec) {
+          newSlots[cat as StyleCategory] = {
+            category: cat as StyleCategory,
+            product: rec.product,
+            isLocked: false,
+            suggestionReason: rec.reason,
+          };
+        }
       }
-    });
-    return Array.from(map.values());
-  }, [products]);
 
-  // Filter products by normalized style categories
-  const topProducts = useMemo(
-    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'TOP'),
-    [uniqueProducts]
-  );
-  const bottomProducts = useMemo(
-    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'BOTTOM'),
-    [uniqueProducts]
-  );
-  const shoesProducts = useMemo(
-    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'SHOES'),
-    [uniqueProducts]
-  );
-  const accessoryProducts = useMemo(
-    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'ACCESSORY'),
-    [uniqueProducts]
-  );
+      setCompleteLookSuggestions(recs.completeTheLookItems);
+    } else {
+      setCompleteLookSuggestions([]);
+    }
 
-  // Selected product instances
-  const selectedTop = useMemo(
-    () => uniqueProducts.find((p) => p.id === topId && normalizeStyleCategory(p) === 'TOP') || null,
-    [uniqueProducts, topId]
-  );
-  const selectedBottom = useMemo(
-    () => uniqueProducts.find((p) => p.id === bottomId && normalizeStyleCategory(p) === 'BOTTOM') || null,
-    [uniqueProducts, bottomId]
-  );
-  const selectedShoes = useMemo(
-    () => uniqueProducts.find((p) => p.id === shoesId && normalizeStyleCategory(p) === 'SHOES') || null,
-    [uniqueProducts, shoesId]
-  );
-  const selectedAccessory = useMemo(
-    () =>
-      uniqueProducts.find((p) => p.id === accessoryId && normalizeStyleCategory(p) === 'ACCESSORY') || null,
-    [uniqueProducts, accessoryId]
-  );
+    setSlots(newSlots);
+  }, [catalog, gender]);
 
-  // Handler for opening selector modal
-  const handleOpenSelector = useCallback((cat: StyleCategory) => {
-    setActiveModalCategory(cat);
-  }, []);
-
-  // Handler for product selection
+  // 3. User Selects a Product for a specific category slot
   const handleSelectProduct = useCallback(
-    (productId: string) => {
-      if (!activeModalCategory) return;
-      switch (activeModalCategory) {
-        case 'TOP':
-          setTopId(productId);
-          break;
-        case 'BOTTOM':
-          setBottomId(productId);
-          break;
-        case 'SHOES':
-          setShoesId(productId);
-          break;
-        case 'ACCESSORY':
-          setAccessoryId(productId);
-          break;
-      }
+    (cat: StyleCategory, product: Product) => {
+      setSlots((prev) => {
+        const updated: Record<StyleCategory, StyleSlotState> = {
+          ...prev,
+          [cat]: {
+            category: cat,
+            product,
+            isLocked: true, // Manual selection = LOCKED
+            suggestionReason: undefined,
+          },
+        };
+
+        // Recalculate recommendations for remaining UNLOCKED slots
+        const recs = recommendMatchingPieces({
+          selectedProduct: product,
+          catalog,
+          gender,
+          currentSlots: updated,
+        });
+
+        for (const [categoryKey, rec] of Object.entries(recs.recommendedSlots)) {
+          const k = categoryKey as StyleCategory;
+          // Only update if not locked
+          if (!updated[k].isLocked && rec) {
+            updated[k] = {
+              category: k,
+              product: rec.product,
+              isLocked: false,
+              suggestionReason: rec.reason,
+            };
+          }
+        }
+
+        setCompleteLookSuggestions(recs.completeTheLookItems);
+        return updated;
+      });
     },
-    [activeModalCategory]
+    [catalog, gender]
   );
 
-  // Handler for clearing selection
-  const handleDeselectProduct = useCallback(() => {
-    if (!activeModalCategory) return;
-    switch (activeModalCategory) {
-      case 'TOP':
-        setTopId('');
-        break;
-      case 'BOTTOM':
-        setBottomId('');
-        break;
-      case 'SHOES':
-        setShoesId('');
-        break;
-      case 'ACCESSORY':
-        setAccessoryId('');
-        break;
-    }
-  }, [activeModalCategory]);
+  // 4. Toggle Lock on a slot
+  const handleToggleLock = useCallback(
+    (cat: StyleCategory) => {
+      setSlots((prev) => {
+        const currentSlot = prev[cat];
+        if (!currentSlot.product) return prev;
 
-  // Reset look handler
-  const handleResetLook = useCallback(() => {
-    setTopId('');
-    setBottomId('');
-    setShoesId('');
-    setAccessoryId('');
-  }, []);
+        const nextLocked = !currentSlot.isLocked;
+        const updated = {
+          ...prev,
+          [cat]: {
+            ...currentSlot,
+            isLocked: nextLocked,
+          },
+        };
 
-  // Surprise Me (Random look generator strictly respecting normalized categories from the actual catalog)
-  const handleSurpriseMe = useCallback(() => {
-    if (topProducts.length > 0) {
-      const randTop = topProducts[Math.floor(Math.random() * topProducts.length)];
-      setTopId(randTop.id);
+        // If newly unlocked, recalculate it based on active locked top/reference
+        if (!nextLocked) {
+          const anchorProduct = prev.TOP.product || Object.values(prev).find((s) => s.isLocked && s.product)?.product || null;
+          const recs = recommendMatchingPieces({
+            selectedProduct: anchorProduct,
+            catalog,
+            gender,
+            currentSlots: updated,
+          });
+
+          if (recs.recommendedSlots[cat]) {
+            updated[cat] = {
+              category: cat,
+              product: recs.recommendedSlots[cat]!.product,
+              isLocked: false,
+              suggestionReason: recs.recommendedSlots[cat]!.reason,
+            };
+          }
+          setCompleteLookSuggestions(recs.completeTheLookItems);
+        }
+
+        return updated;
+      });
+    },
+    [catalog, gender]
+  );
+
+  // 5. Clear a slot
+  const handleClearSlot = useCallback(
+    (cat: StyleCategory) => {
+      setSlots((prev) => ({
+        ...prev,
+        [cat]: {
+          category: cat,
+          product: null,
+          isLocked: false,
+        },
+      }));
+    },
+    []
+  );
+
+  // 6. Reset entire look
+  const handleResetOutfit = useCallback(() => {
+    const genderCatalog = catalog.filter((p) => normalizeProductGender(p) === gender);
+    const tops = genderCatalog.filter((p) => normalizeStyleCategory(p) === 'TOP');
+    const defaultTop = tops.length > 0 ? tops[0] : null;
+
+    const newSlots: Record<StyleCategory, StyleSlotState> = {
+      TOP: { category: 'TOP', product: defaultTop, isLocked: true },
+      BOTTOM: { category: 'BOTTOM', product: null, isLocked: false },
+      SHOES: { category: 'SHOES', product: null, isLocked: false },
+      ACCESSORY: { category: 'ACCESSORY', product: null, isLocked: false },
+    };
+
+    if (defaultTop) {
+      const recs = recommendMatchingPieces({
+        selectedProduct: defaultTop,
+        catalog,
+        gender,
+        currentSlots: newSlots,
+      });
+
+      for (const [cat, rec] of Object.entries(recs.recommendedSlots)) {
+        if (rec) {
+          newSlots[cat as StyleCategory] = {
+            category: cat as StyleCategory,
+            product: rec.product,
+            isLocked: false,
+            suggestionReason: rec.reason,
+          };
+        }
+      }
+      setCompleteLookSuggestions(recs.completeTheLookItems);
     }
-    if (bottomProducts.length > 0) {
-      const randBottom = bottomProducts[Math.floor(Math.random() * bottomProducts.length)];
-      setBottomId(randBottom.id);
-    }
-    if (shoesProducts.length > 0) {
-      const randShoes = shoesProducts[Math.floor(Math.random() * shoesProducts.length)];
-      setShoesId(randShoes.id);
-    }
-    if (accessoryProducts.length > 0) {
-      if (Math.random() > 0.3) {
-        const randAcc = accessoryProducts[Math.floor(Math.random() * accessoryProducts.length)];
-        setAccessoryId(randAcc.id);
-      } else {
-        setAccessoryId('');
+    setSlots(newSlots);
+  }, [catalog, gender]);
+
+  // Set of actively selected product IDs for duplicate badge check
+  const activeProductIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const slot of Object.values(slots)) {
+      if (slot.product?.id) {
+        set.add(slot.product.id);
       }
     }
-  }, [topProducts, bottomProducts, shoesProducts, accessoryProducts]);
-
-  // Active modal products list
-  const modalProducts = useMemo(() => {
-    switch (activeModalCategory) {
-      case 'TOP':
-        return topProducts;
-      case 'BOTTOM':
-        return bottomProducts;
-      case 'SHOES':
-        return shoesProducts;
-      case 'ACCESSORY':
-        return accessoryProducts;
-      default:
-        return [];
-    }
-  }, [activeModalCategory, topProducts, bottomProducts, shoesProducts, accessoryProducts]);
-
-  // Active selected ID in modal
-  const modalSelectedId = useMemo(() => {
-    switch (activeModalCategory) {
-      case 'TOP':
-        return topId;
-      case 'BOTTOM':
-        return bottomId;
-      case 'SHOES':
-        return shoesId;
-      case 'ACCESSORY':
-        return accessoryId;
-      default:
-        return null;
-    }
-  }, [activeModalCategory, topId, bottomId, shoesId, accessoryId]);
-
-  // Selector cards configuration
-  const selectorCards = [
-    {
-      category: 'TOP' as StyleCategory,
-      title: 'Top',
-      eyebrow: 'Upper Body',
-      product: selectedTop,
-      count: topProducts.length,
-      emptyPrompt: 'Choose a top to complete your look.',
-      icon: Shirt,
-    },
-    {
-      category: 'BOTTOM' as StyleCategory,
-      title: 'Bottom',
-      eyebrow: 'Trousers & Denim',
-      product: selectedBottom,
-      count: bottomProducts.length,
-      emptyPrompt: 'Choose bottoms to complete your look.',
-      icon: ShoppingBag,
-    },
-    {
-      category: 'SHOES' as StyleCategory,
-      title: 'Shoes',
-      eyebrow: 'Footwear',
-      product: selectedShoes,
-      count: shoesProducts.length,
-      emptyPrompt: 'Choose shoes to complete your look.',
-      icon: Footprints,
-    },
-    {
-      category: 'ACCESSORY' as StyleCategory,
-      title: 'Accessory',
-      eyebrow: 'Finishing Touch',
-      product: selectedAccessory,
-      count: accessoryProducts.length,
-      emptyPrompt: 'Accessory optional',
-      icon: Watch,
-    },
-  ];
+    return set;
+  }, [slots]);
 
   return (
-    <main className="stylePageRoot">
-      <div className="styleContainer">
-        {/* TOP NAVIGATION BREADCRUMB */}
-        <div className="styleNavRow">
-          <Link href="/" className="btn btnLight btnBack">
-            <ArrowLeft size={16} />
-            <span>Back to Collection</span>
-          </Link>
+    <div className="style-builder-page-root">
+      {/* Editorial Navigation Topbar */}
+      <header className="style-page-header">
+        <div className="header-inner-container">
+          <div className="header-left">
+            <Link href="/" className="btn-back-home">
+              <ArrowLeft size={16} />
+              <span>Back to Catalog</span>
+            </Link>
+            <div className="header-brand-title">
+              <span className="brand-badge">FASHIONFIND STUDIO</span>
+              <h1 className="page-main-heading">Create Your Style</h1>
+            </div>
+          </div>
 
-          <div className="styleQuickActions">
+          <div className="header-right">
             <button
               type="button"
-              className="btn btnLight btnSmall"
-              onClick={handleSurpriseMe}
-              title="Generate a random coordinated outfit"
+              className="btn-reset-look"
+              onClick={handleResetOutfit}
+              title="Reset outfit to default recommendations"
             >
-              <Wand2 size={14} />
-              <span>Surprise Me</span>
-            </button>
-            <button
-              type="button"
-              className="btn btnLight btnSmall"
-              onClick={handleResetLook}
-              title="Clear all selections"
-            >
-              <RefreshCw size={14} />
+              <RotateCcw size={14} />
               <span>Reset Look</span>
             </button>
           </div>
         </div>
+      </header>
 
-        {/* HERO SECTION */}
-        <section className="styleHeroSection">
-          <span className="eyebrow">
-            <Sparkles size={13} />
-            Fashion Studio
-          </span>
-          <h1 className="styleHeroHeading">
-            Create Your <em>Style.</em>
-          </h1>
-          <p className="styleHeroSubtitle">
-            Build a complete look from pieces you love. Explore how tops, bottoms, shoes and
-            accessories harmonize together in a premium editorial presentation.
-          </p>
-        </section>
-
-        {/* 4-COLUMN SELECTOR GRID */}
-        <section className="selectorSection" aria-label="Outfit Pieces Selector">
-          <div className="selectorGridHeader">
-            <h3>
-              <Layers size={18} />
-              <span>Choose Your 4 Wardrobe Pieces</span>
-            </h3>
-            <span className="selectorHint">Click any card to explore available styles</span>
-          </div>
-
-          <div className="styleSelectorGrid">
-            {selectorCards.map(({ category, title, eyebrow, product, count, emptyPrompt, icon: IconComponent }) => {
-              const isSelected = Boolean(product);
-
-              return (
-                <div
-                  key={category}
-                  className={`selectorCard glassPanel ${isSelected ? 'hasProduct' : 'isEmpty'}`}
-                  onClick={() => handleOpenSelector(category)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleOpenSelector(category);
-                    }
-                  }}
-                  aria-label={`${title} selector: ${product ? product.title : emptyPrompt}`}
-                >
-                  {/* CARD TOP HEADER */}
-                  <div className="selectorCardHeader">
-                    <div className="selectorCategoryLabel">
-                      <IconComponent size={15} className="categoryIcon" />
-                      <div>
-                        <span className="categoryEyebrow">{eyebrow}</span>
-                        <h4>{title}</h4>
-                      </div>
-                    </div>
-                    <span className="itemCountBadge">{count} styles</span>
-                  </div>
-
-                  {/* CARD BODY CONTENT */}
-                  {product ? (
-                    <div className="selectorCardContent">
-                      <div className="selectorImageWrapper">
-                        <Image
-                          src={product.image}
-                          alt={product.title}
-                          width={260}
-                          height={300}
-                          className="selectorProductImg"
-                        />
-                        <span className="selectedCheckBadge">
-                          <CheckCircle2 size={13} />
-                          <span>Selected</span>
-                        </span>
-                      </div>
-
-                      <div className="selectorProductDetails">
-                        <span className="selectorBrand">{product.brand}</span>
-                        <h5 className="selectorTitle" title={product.title}>
-                          {product.title}
-                        </h5>
-
-                        <div className="selectorMetaRow">
-                          {product.color && <span className="chip">{product.color}</span>}
-                          {product.fit && <span className="chip">{product.fit}</span>}
-                        </div>
-
-                        <div className="selectorCardFooter">
-                          <span className="selectorPrice">{product.price}</span>
-                          <span className="btnChangePieceInline">
-                            Change <ChevronRight size={13} />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="selectorCardEmpty">
-                      <div className="emptyIconCircle">
-                        <IconComponent size={26} />
-                      </div>
-                      <span className="emptyPromptText">{emptyPrompt}</span>
-                      <button type="button" className="btn btnDark btnSmall selectPieceBtn">
-                        <Plus size={14} />
-                        <span>Select {title}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {/* Main 2-Column Responsive Workspace */}
+      <main className="style-workspace-container">
+        {/* LEFT COLUMN: Large Faceless Human Model Hero View */}
+        <section className="style-column-left" aria-label="Human Outfit Model Preview">
+          <div className="sticky-model-column">
+            <OutfitModelView
+              gender={gender}
+              slots={slots}
+              onSelectCategory={(cat) => setActivePickerCategory(cat)}
+            />
           </div>
         </section>
 
-        {/* REALISTIC EDITORIAL MODEL PREVIEW */}
-        <section className="modelSection" aria-label="Editorial Lookbook Preview">
-          <OutfitModelViewer
-            topProduct={selectedTop}
-            bottomProduct={selectedBottom}
-            shoesProduct={selectedShoes}
-            accessoryProduct={selectedAccessory}
-            onOpenSelector={handleOpenSelector}
+        {/* RIGHT COLUMN: Style Builder Controls, Steps, Your Look, Recommendations */}
+        <section className="style-column-right" aria-label="Outfit Builder Controls">
+          {/* Step 1: Gender Collection Selector */}
+          <GenderSelector
+            gender={gender}
+            onChange={(g) => setGender(g)}
+          />
+
+          {/* Steps 2-5: Category Step Selection */}
+          <CategoryStepSelector
+            gender={gender}
+            slots={slots}
+            onOpenPicker={(cat) => setActivePickerCategory(cat)}
+            onToggleLock={handleToggleLock}
+            onClearSlot={handleClearSlot}
+          />
+
+          {/* Complete The Look Suggestions */}
+          <CompleteTheLook
+            items={completeLookSuggestions}
+            onAddPiece={handleSelectProduct}
+            activeProductIds={activeProductIds}
+          />
+
+          {/* Your Look & Shop This Look Panel */}
+          <OutfitSummary
+            gender={gender}
+            slots={slots}
+            onToggleLock={handleToggleLock}
+            onOpenPicker={(cat) => setActivePickerCategory(cat)}
           />
         </section>
+      </main>
 
-        {/* OUTFIT SUMMARY & AMAZON AFFILIATE ACTIONS */}
-        <OutfitSummary
-          topProduct={selectedTop}
-          bottomProduct={selectedBottom}
-          shoesProduct={selectedShoes}
-          accessoryProduct={selectedAccessory}
-          onOpenSelector={handleOpenSelector}
-          onReset={handleResetLook}
-          onSurpriseMe={handleSurpriseMe}
-        />
-      </div>
-
-      {/* PRODUCT SELECTION MODAL */}
-      <ProductSelectModal
-        isOpen={activeModalCategory !== null}
-        category={activeModalCategory}
-        products={modalProducts}
-        selectedId={modalSelectedId}
-        onSelect={handleSelectProduct}
-        onDeselect={handleDeselectProduct}
-        onClose={() => setActiveModalCategory(null)}
+      {/* Real Catalog Search & Product Picker Modal */}
+      <ProductPickerModal
+        isOpen={activePickerCategory !== null}
+        category={activePickerCategory}
+        gender={gender}
+        catalog={catalog}
+        currentSelectedId={activePickerCategory ? slots[activePickerCategory]?.product?.id : undefined}
+        onSelectProduct={handleSelectProduct}
+        onClose={() => setActivePickerCategory(null)}
       />
-    </main>
+    </div>
   );
 }
