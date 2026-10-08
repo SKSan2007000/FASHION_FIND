@@ -1,0 +1,27 @@
+export type SpecRow = { label: string; value: string };
+export type Product = {
+  id:string; title:string; brand:string; category:string; price:string; image:string; affiliateUrl:string; description:string;
+  color:string; fit:string; style:string; neck:string; sleeve:string; pattern:string; material:string; care:string; closure:string;
+  country:string; asin:string; model:string; rank:string; pockets:string; season:string; occasion:string; specs: SpecRow[]; sourceText?: string;
+};
+
+export const initialProducts: Product[] = [
+ {
+  id:'jack-jones-12290084-mid-blue', title:'Classic Mid Blue Regular Fit Shirt', brand:'JACK & JONES', category:"Men's Shirts", price:'See latest price on Amazon', image:'/products/jack-jones-mid-blue.png', affiliateUrl:'https://link.amazon/B0cWbrp7g',
+  description:'A clean, versatile mid-blue shirt with a classic collared silhouette, long sleeves and a regular fit. A simple everyday layer that works with denim, trousers or smart-casual looks.',
+  color:'Mid Blue', fit:'Regular Fit', style:'Classic', neck:'Collared Neck', sleeve:'Long Sleeve', pattern:'Solid', material:'95% Cotton, 5% Cotton - recycled', care:'Machine Wash', closure:'Button', country:'Bangladesh', asin:'B0GX61Z4R9', model:'12290084', rank:'#14,553 Clothing & Accessories • #642 Men’s Shirts', pockets:'1', season:'', occasion:'',
+  specs:[['Colour','Mid Blue'],['Fitting type','Regular Fit'],['Style Name','Classic'],['Neck Style','Collared Neck'],['Sleeve Type','Long Sleeve'],['Shirt Form Type','Tuxedo Shirt'],['Collar Style','Spread Collar'],['Pattern','Solid'],['Apparel Closure Type','Button'],['Hemline Form','Curved'],['Brand Name','JACK & JONES'],['Model Name','12290084'],['Style Number','12290084-Mid Blue'],['Country Of Origin','Bangladesh'],['Item Type Name','Shirt'],['Item Weight','300 g'],['Material type','Cotton Blend'],['Fabric Type','95% Cotton, 5% Cotton - recycled'],['Product Care Instructions','Machine Wash'],['Fabric Stretchability','Non-stretchable'],['ASIN','B0GX61Z4R9']].map(([label,value])=>({label,value}))
+ },
+ {
+  id:'peter-england-pcsflslbj05093-black', title:'Peter England Cotton Linen Solid Shirt — Black', brand:'Peter England', category:"Men's Shirts", price:'See latest price on Amazon', image:'/products/peter-england-black.png', affiliateUrl:'https://link.amazon/B0cpTcD9D',
+  description:'A lightweight black solid shirt from Peter England with a slim, modern silhouette, collared neckline and long sleeves. Its cotton-linen fabric is designed for easy casual summer styling.',
+  color:'Black', fit:'Slim Fit', style:'Modern', neck:'Collared Neck', sleeve:'Long Sleeve', pattern:'Solid', material:'62% Cotton and 38% Linen', care:'Machine Wash', closure:'Button', country:'India', asin:'B0F5QJDPWK', model:'PCSFLSLBJ05093', rank:'#2,420 Clothing & Accessories • #138 Men’s Shirts', pockets:'1', season:'Summer', occasion:'Casual',
+  specs:[['Colour','Black'],['Fitting type','Slim Fit'],['Style Name','Modern'],['Neck Style','Collared Neck'],['Sleeve Type','Long Sleeve'],['Shirt Form Type','Tuxedo Shirt'],['Collar Style','Spread Collar'],['Pattern','Solid'],['Season','Summer'],['Apparel Closure Type','Button'],['Cuff Style','Plain Hem'],['Apparel Occasion and Lifestyle','Casual'],['Brand Name','Peter England'],['Model Name','Cotton Linen Solids F/S Regular Collar-New'],['Style Number','PCSFLSLBJ05093'],['Country Of Origin','India'],['Item Type Name','Shirt'],['Item Weight','400 g'],['Number Of Pockets','1'],['Pocket Description','Chest Pocket'],['Material type','Cotton Blend'],['Fabric Type','62% Cotton and 38% Linen'],['Product Care Instructions','Machine Wash'],['Apparel Fabric Weight Class','Lightweight'],['ASIN','B0F5QJDPWK'],['Customer Reviews','4.1 out of 5 stars (112)']].map(([label,value])=>({label,value}))
+ },
+ {
+  id:'highlander-hlsh008837-white', title:'HIGHLANDER HLSH008837 Solid Mandarin Collar Shirt — White', brand:'HIGHLANDER', category:"Men's Shirts", price:'See latest price on Amazon', image:'/products/highlander-white.png', affiliateUrl:'https://link.amazon/B0ghQAHR9',
+  description:'A clean white solid shirt from HIGHLANDER featuring a regular fit and a distinctive mandarin collar. The lightweight 100% cotton fabric makes it an easy summer-ready choice.',
+  color:'White', fit:'Regular Fit', style:'HLSH013828', neck:'Mandarin Neck', sleeve:'Short Sleeve', pattern:'Solid', material:'100% Cotton', care:'Machine Wash', closure:'', country:'India', asin:'B01N44MVFT', model:'HLSH008837', rank:'#13,306 Clothing & Accessories • #585 Men’s Shirts', pockets:'', season:'Summer', occasion:'',
+  specs:[['Colour','WHITE'],['Fitting type','Regular Fit'],['Style Name','HLSH013828'],['Neck Style','Mandarin Neck'],['Sleeve Type','Short Sleeve'],['Collar Style','Mandarin Collar'],['Pattern','Solid'],['Season','Summer'],['Cuff Style','Plain Hem'],['Brand Name','Highlander'],['Model Name','HLSH008837'],['Style Number','HLSH008837'],['Country Of Origin','India'],['Item Type Name','Shirt'],['Item Weight','300 g'],['Manufacturer Part Number','HLSH013828'],['ASIN','B01N44MVFT'],['Customer Reviews','3.1 out of 5 stars (16)'],['Fitting type','Regular Fit'],['Sleeve Length Description','Long Sleeve'],['Is Customisable?','No'],['Material type','Cotton'],['Fabric Type','100% Cotton'],['Product Care Instructions','Machine Wash'],['Apparel Fabric Weight Class','Lightweight'],['Item Length Description','Standard Length']].map(([label,value])=>({label,value}))
+ }
+];
