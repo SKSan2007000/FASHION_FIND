@@ -39,14 +39,14 @@ const CATEGORY_ICONS: Record<StyleCategory, React.ComponentType<{ size?: number;
 export default function StylePage() {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [topId, setTopId] = useState<string>('jack-jones-12290084-mid-blue');
-  const [bottomId, setBottomId] = useState<string>('levis-511-slim-fit-dark-indigo');
-  const [shoesId, setShoesId] = useState<string>('nike-court-vision-low-white');
-  const [accessoryId, setAccessoryId] = useState<string>('fossil-grant-chronograph-watch');
+  const [bottomId, setBottomId] = useState<string>('');
+  const [shoesId, setShoesId] = useState<string>('');
+  const [accessoryId, setAccessoryId] = useState<string>('');
 
   // Modal selector state
   const [activeModalCategory, setActiveModalCategory] = useState<StyleCategory | null>(null);
 
-  // Load catalog from Supabase or localStorage
+  // Load catalog from Supabase or localStorage with strict deduplication
   useEffect(() => {
     let mounted = true;
     const loadProducts = async () => {
@@ -87,41 +87,52 @@ export default function StylePage() {
     };
   }, []);
 
+  // Deduplicate products strictly by product.id
+  const uniqueProducts = useMemo(() => {
+    const map = new Map<string, Product>();
+    products.forEach((p) => {
+      if (p.id && !map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+    return Array.from(map.values());
+  }, [products]);
+
   // Filter products by normalized style categories
   const topProducts = useMemo(
-    () => products.filter((p) => normalizeStyleCategory(p) === 'TOP'),
-    [products]
+    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'TOP'),
+    [uniqueProducts]
   );
   const bottomProducts = useMemo(
-    () => products.filter((p) => normalizeStyleCategory(p) === 'BOTTOM'),
-    [products]
+    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'BOTTOM'),
+    [uniqueProducts]
   );
   const shoesProducts = useMemo(
-    () => products.filter((p) => normalizeStyleCategory(p) === 'SHOES'),
-    [products]
+    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'SHOES'),
+    [uniqueProducts]
   );
   const accessoryProducts = useMemo(
-    () => products.filter((p) => normalizeStyleCategory(p) === 'ACCESSORY'),
-    [products]
+    () => uniqueProducts.filter((p) => normalizeStyleCategory(p) === 'ACCESSORY'),
+    [uniqueProducts]
   );
 
   // Selected product instances
   const selectedTop = useMemo(
-    () => products.find((p) => p.id === topId && normalizeStyleCategory(p) === 'TOP') || null,
-    [products, topId]
+    () => uniqueProducts.find((p) => p.id === topId && normalizeStyleCategory(p) === 'TOP') || null,
+    [uniqueProducts, topId]
   );
   const selectedBottom = useMemo(
-    () => products.find((p) => p.id === bottomId && normalizeStyleCategory(p) === 'BOTTOM') || null,
-    [products, bottomId]
+    () => uniqueProducts.find((p) => p.id === bottomId && normalizeStyleCategory(p) === 'BOTTOM') || null,
+    [uniqueProducts, bottomId]
   );
   const selectedShoes = useMemo(
-    () => products.find((p) => p.id === shoesId && normalizeStyleCategory(p) === 'SHOES') || null,
-    [products, shoesId]
+    () => uniqueProducts.find((p) => p.id === shoesId && normalizeStyleCategory(p) === 'SHOES') || null,
+    [uniqueProducts, shoesId]
   );
   const selectedAccessory = useMemo(
     () =>
-      products.find((p) => p.id === accessoryId && normalizeStyleCategory(p) === 'ACCESSORY') || null,
-    [products, accessoryId]
+      uniqueProducts.find((p) => p.id === accessoryId && normalizeStyleCategory(p) === 'ACCESSORY') || null,
+    [uniqueProducts, accessoryId]
   );
 
   // Handler for opening selector modal
@@ -178,7 +189,7 @@ export default function StylePage() {
     setAccessoryId('');
   }, []);
 
-  // Surprise Me (Random look generator strictly respecting normalized categories)
+  // Surprise Me (Random look generator strictly respecting normalized categories from the actual catalog)
   const handleSurpriseMe = useCallback(() => {
     if (topProducts.length > 0) {
       const randTop = topProducts[Math.floor(Math.random() * topProducts.length)];
@@ -193,8 +204,7 @@ export default function StylePage() {
       setShoesId(randShoes.id);
     }
     if (accessoryProducts.length > 0) {
-      // 80% chance to include accessory
-      if (Math.random() > 0.2) {
+      if (Math.random() > 0.3) {
         const randAcc = accessoryProducts[Math.floor(Math.random() * accessoryProducts.length)];
         setAccessoryId(randAcc.id);
       } else {
@@ -318,7 +328,7 @@ export default function StylePage() {
           </h1>
           <p className="styleHeroSubtitle">
             Build a complete look from pieces you love. Explore how tops, bottoms, shoes and
-            accessories harmonize together on a 360° rotatable fashion model.
+            accessories harmonize together in a premium editorial presentation.
           </p>
         </section>
 
@@ -417,8 +427,8 @@ export default function StylePage() {
           </div>
         </section>
 
-        {/* ROTATABLE MODEL VIEWER */}
-        <section className="modelSection" aria-label="360 Degree Rotatable Model Preview">
+        {/* REALISTIC EDITORIAL MODEL PREVIEW */}
+        <section className="modelSection" aria-label="Editorial Lookbook Preview">
           <OutfitModelViewer
             topProduct={selectedTop}
             bottomProduct={selectedBottom}

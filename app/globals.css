@@ -12,14 +12,14 @@
   --blue-soft: #eff3ff;
   --soft: #f8fafc;
   --bg-page: #fbfcfe;
-  --glass-bg: rgba(255, 255, 255, 0.82);
-  --glass-border: rgba(220, 226, 240, 0.8);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(220, 226, 240, 0.85);
   --shadow-sm: 0 4px 12px rgba(16, 27, 53, 0.04);
   --shadow-md: 0 12px 32px rgba(16, 27, 53, 0.07);
   --shadow-lg: 0 24px 60px rgba(16, 27, 53, 0.1);
   --radius-sm: 12px;
   --radius-md: 18px;
-  --radius-lg: 26px;
+  --radius-lg: 24px;
   --radius-xl: 32px;
 }
 
@@ -61,7 +61,7 @@ img {
 }
 
 /* ========================================================
-   BASE LAYOUT & HEADER
+   BASE LAYOUT & TOPBAR
 ======================================================== */
 .shell {
   max-width: 1280px;
@@ -214,7 +214,7 @@ img {
 }
 
 .btnLarge {
-  padding: 16px 28px;
+  padding: 16px 32px;
   font-size: 16px;
   border-radius: 18px;
 }
@@ -260,7 +260,7 @@ img {
   letter-spacing: -0.055em;
   margin: 24px 0;
 }
-.hero h1 em, .styleHeroHeading em, .summaryTitle em, .detail h1 em {
+.hero h1 em, .styleHeroHeading em, .summaryTitle em, .detail h1 em, .modelViewerTitleGroup h2 em {
   font-family: 'Playfair Display', Georgia, serif;
   font-weight: 500;
   font-style: italic;
@@ -840,7 +840,7 @@ img {
 
 /* ========================================================
    ========================================================
-   REDESIGNED "CREATE MY STYLE" STUDIO - ADVANCED CSS
+   REDESIGNED "CREATE MY STYLE" STUDIO - LUXURY EDITORIAL
    ========================================================
 ======================================================== */
 
@@ -969,7 +969,7 @@ img {
   flex-direction: column;
   justify-content: space-between;
   min-height: 380px;
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--glass-border);
   box-sizing: border-box;
   position: relative;
@@ -989,7 +989,7 @@ img {
 
 .selectorCard.hasProduct {
   border-color: #d6e0f5;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 255, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 255, 0.88) 100%);
 }
 
 .selectorCardHeader {
@@ -1039,7 +1039,6 @@ img {
   font-weight: 600;
 }
 
-/* Product Card Inside Selector */
 .selectorCardContent {
   display: flex;
   flex-direction: column;
@@ -1153,7 +1152,6 @@ img {
   transform: translateX(2px);
 }
 
-/* Empty Selector Card */
 .selectorCardEmpty {
   display: flex;
   flex-direction: column;
@@ -1190,7 +1188,7 @@ img {
 }
 
 /* ========================================================
-   2. ROTATABLE MODEL VIEWER SECTION
+   2. REALISTIC EDITORIAL MODEL PREVIEW SECTION
 ======================================================== */
 .modelSection {
   width: 100%;
@@ -1198,13 +1196,12 @@ img {
 }
 
 .modelViewerSection {
-  padding: 36px 32px;
+  padding: 38px 36px;
   border-radius: var(--radius-xl);
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  background: rgba(255, 255, 255, 0.88);
-  outline: none;
+  gap: 28px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .modelViewerHeader {
@@ -1227,276 +1224,252 @@ img {
   color: var(--muted);
 }
 
-.modelViewerTopActions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.lightingGroup {
-  display: flex;
-  background: #f1f4f9;
-  border-radius: 999px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.toolBtn {
+.statusTag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 8px;
+  padding: 8px 16px;
   border-radius: 999px;
-  border: 1px solid transparent;
-  background: transparent;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-weight: 700;
 }
 
-.toolBtn:hover {
-  background: rgba(255, 255, 255, 0.8);
-  color: var(--blue);
+.statusTag.complete {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
 }
 
-.toolBtn.active {
-  background: white;
-  color: var(--blue);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border-color: #e2e8f0;
+.statusTag.inProgress {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
-/* Stage Wrapper */
-.modelStageWrapper {
+/* 2-Column Editorial Grid (Model Photo + Ensemble Breakdown) */
+.editorialStageGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 32px;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modelPhotoFrame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.modelImageContainer {
   position: relative;
   width: 100%;
-  height: 600px;
-  border-radius: 28px;
-  background: radial-gradient(circle at 50% 30%, #ffffff 0%, #f1f4fb 70%, #e7ecf6 100%);
-  border: 1px solid rgba(215, 222, 236, 0.8);
+  height: 100%;
+  min-height: 540px;
+  border-radius: 26px;
+  background: linear-gradient(145deg, #f3f6fa, #e9edf5);
+  border: 1px solid rgba(215, 222, 236, 0.9);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: pan-y;
-  cursor: grab;
-  user-select: none;
-  transition: background 0.4s ease;
-  box-sizing: border-box;
+  box-shadow: 0 16px 40px rgba(24, 38, 70, 0.08);
 }
 
-.modelStageWrapper.isDragging {
-  cursor: grabbing;
-}
-
-.modelStageWrapper.lighting-sunset {
-  background: radial-gradient(circle at 50% 25%, #fff7ed 0%, #ffedd5 60%, #fed7aa 100%);
-}
-
-.modelStageWrapper.lighting-editorial {
-  background: radial-gradient(circle at 50% 25%, #1e293b 0%, #0f172a 70%, #020617 100%);
-}
-
-.modelStageWrapper.lighting-editorial .rotatePromptText,
-.modelStageWrapper.lighting-editorial .rotatePromptArrow {
-  color: #cbd5e1;
-}
-
-/* Floating Navigation Arrows */
-.arrowBtn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  color: var(--ink);
-  font-size: 26px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.2s ease;
-  box-shadow: 0 8px 24px rgba(16, 27, 53, 0.1);
-}
-
-.arrowBtn:hover {
-  background: #ffffff;
-  color: var(--blue);
-  transform: translateY(-50%) scale(1.08);
-  box-shadow: 0 12px 30px rgba(16, 27, 53, 0.16);
-}
-
-.arrowBtnLeft {
-  left: 20px;
-}
-
-.arrowBtnRight {
-  right: 20px;
-}
-
-/* Angle Badge */
-.angleBadge {
-  position: absolute;
-  top: 20px;
-  left: 24px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(220, 226, 240, 0.85);
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 6px 18px rgba(16, 27, 53, 0.06);
-  z-index: 10;
-}
-
-.angleDegree {
-  background: var(--blue-soft);
-  color: var(--blue);
-  padding: 2px 7px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-/* Model Canvas */
-.modelVisualContainer {
-  position: relative;
+.editorialModelImg {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  box-sizing: border-box;
+  object-fit: cover;
+  object-position: center top;
+  transition: transform 0.4s ease;
 }
 
-.humanFashionModelSvg {
-  width: 100%;
-  height: 94%;
-  max-width: 440px;
-  object-fit: contain;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  filter: drop-shadow(0 20px 30px rgba(22, 33, 56, 0.12));
+.modelPhotoFrame:hover .editorialModelImg {
+  transform: scale(1.02);
 }
 
-.modelStageWrapper.isZoomed .humanFashionModelSvg {
-  transform: scale(1.32) translateY(30px);
-}
-
-/* Prompt Below Model */
-.modelRotatePrompt {
+.modelPhotoBadge {
   position: absolute;
-  bottom: 22px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: rgba(16, 27, 53, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 12px 18px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modelPhotoBadge b {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.modelPhotoBadge span {
+  font-size: 11px;
+  color: #c4d3fa;
+}
+
+/* Ensemble Sidebar */
+.ensembleSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.ensembleHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebarEyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(220, 226, 240, 0.85);
-  padding: 8px 18px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  box-shadow: 0 8px 24px rgba(16, 27, 53, 0.08);
-  pointer-events: none;
-  z-index: 10;
-}
-
-.rotatePromptArrow {
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--blue);
-  font-size: 15px;
-  animation: pulseArrow 1.5s infinite ease-in-out;
 }
 
-@keyframes pulseArrow {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(3px); }
+.ensembleHeader h3 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
 }
 
-/* Quick Angle Presets */
-.angleSelectorBar {
+.sidebarDesc {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.selectedPiecesList {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.selectedPieceRow {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  transition: all 0.2s ease;
+  gap: 10px;
+}
+
+.selectedPieceRow.active {
+  border-color: #cbd8f2;
+  box-shadow: 0 4px 16px rgba(70, 105, 232, 0.05);
+}
+
+.selectedPieceRow.empty {
+  border-style: dashed;
+  background: rgba(248, 250, 254, 0.5);
+}
+
+.pieceCategoryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--blue);
+  letter-spacing: 0.08em;
+}
+
+.pieceRowContent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   width: 100%;
 }
 
-.anglePill {
-  padding: 9px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: white;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.anglePill:hover {
-  background: #f4f7fd;
-  color: var(--ink);
-  border-color: #c4d3fa;
-}
-
-.anglePill.active {
-  background: var(--ink);
-  color: white;
-  border-color: var(--ink);
-  box-shadow: 0 4px 14px rgba(16, 27, 53, 0.15);
-}
-
-/* Status Banner */
-.viewerStatusBanner {
+.pieceThumbWrap {
+  width: 52px;
+  height: 64px;
+  background: #f1f4f9;
+  border-radius: 10px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 14px 20px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px;
+  flex-shrink: 0;
 }
 
-.statusComplete {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #166534;
+.pieceThumb {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pieceInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pieceBrand {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.pieceTitle {
   font-size: 13px;
   font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.textSuccess {
-  color: #22c55e;
-}
-
-.statusIncomplete {
-  display: inline-flex;
+.pieceMeta {
+  display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 500;
 }
 
-.textMuted {
+.piecePrice {
+  font-size: 11px;
+  font-weight: 700;
   color: var(--muted);
+}
+
+.pieceShopBtn {
+  flex-shrink: 0;
+}
+
+.pieceEmptyContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.emptyText {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
 }
 
 /* ========================================================
@@ -1688,7 +1661,6 @@ img {
   color: var(--blue);
 }
 
-/* Empty Summary Card */
 .summaryItemEmpty {
   border: 1.5px dashed #cbd5e1;
   background: rgba(248, 250, 254, 0.6);
@@ -1728,7 +1700,6 @@ img {
   line-height: 1.4;
 }
 
-/* Bottom CTA in Summary */
 .summaryBottomCTA {
   display: flex;
   justify-content: space-between;
@@ -1877,7 +1848,6 @@ img {
   border-color: var(--ink);
 }
 
-/* Modal Search & Filter */
 .modalFilterBar {
   padding: 16px 32px;
   background: #fafbfd;
@@ -1942,7 +1912,6 @@ img {
   border-color: var(--ink);
 }
 
-/* Modal Product Grid */
 .modalProductList {
   padding: 24px 32px;
   overflow-y: auto;
@@ -2168,7 +2137,6 @@ img {
    RESPONSIVE BREAKPOINTS (STRICT LAYOUT BOUNDARIES)
 ======================================================== */
 
-/* Desktop Large (1200px - 1400px) */
 @media (max-width: 1280px) {
   .styleHeroHeading {
     font-size: 54px;
@@ -2178,7 +2146,6 @@ img {
   }
 }
 
-/* Tablet (641px - 1024px) */
 @media (max-width: 1024px) {
   .heroGrid, .detailGrid, .adminGrid {
     grid-template-columns: 1fr;
@@ -2193,7 +2160,6 @@ img {
     grid-template-columns: 1fr 1fr;
   }
 
-  /* Style Studio on Tablet */
   .styleHeroHeading {
     font-size: 48px;
   }
@@ -2206,12 +2172,16 @@ img {
   .modalProductGrid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .modelStageWrapper {
-    height: 520px;
+  .editorialStageGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .modelImageContainer {
+    min-height: 420px;
+    max-height: 480px;
   }
 }
 
-/* Mobile (<= 640px) */
 @media (max-width: 640px) {
   .shell {
     padding: 0 16px;
@@ -2236,7 +2206,6 @@ img {
     font-size: 15px;
   }
 
-  /* 1-column selector on Mobile */
   .styleSelectorGrid {
     grid-template-columns: 1fr;
   }
@@ -2246,6 +2215,13 @@ img {
   .modalProductGrid {
     grid-template-columns: 1fr;
   }
+  .editorialStageGrid {
+    grid-template-columns: 1fr;
+  }
+  .modelImageContainer {
+    min-height: 360px;
+    max-height: 400px;
+  }
 
   .modelViewerSection, .summaryCard {
     padding: 22px 16px;
@@ -2253,31 +2229,6 @@ img {
   }
   .modelViewerTitleGroup h2, .summaryTitle {
     font-size: 32px;
-  }
-  .modelStageWrapper {
-    height: 440px;
-    border-radius: 20px;
-  }
-  .humanFashionModelSvg {
-    max-width: 320px;
-  }
-  .arrowBtn {
-    width: 38px;
-    height: 38px;
-    font-size: 20px;
-  }
-  .arrowBtnLeft {
-    left: 10px;
-  }
-  .arrowBtnRight {
-    right: 10px;
-  }
-  .angleSelectorBar {
-    gap: 6px;
-  }
-  .anglePill {
-    padding: 7px 12px;
-    font-size: 11px;
   }
   .summaryBottomCTA {
     padding: 20px;
