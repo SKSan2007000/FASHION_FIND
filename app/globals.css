@@ -3905,3 +3905,1274 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ====================================================================
+   FASHIONFIND V2 — EDITORIAL DESIGN SYSTEM & CHOOSE MY FASHION
+   ==================================================================== */
+
+.chooseFashionPage {
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* Hero Section */
+.chooseHero {
+  padding: 60px 0 30px;
+  text-align: center;
+}
+
+.chooseHeroContent {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.eyebrowBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(70, 105, 232, 0.15);
+}
+
+.chooseHeroTitle {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+.chooseHeroSubtitle {
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.btnPrimaryHero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #101b35 0%, #1e2c4f 100%);
+  color: #ffffff !important;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 14px 28px;
+  border-radius: 999px;
+  box-shadow: 0 10px 25px rgba(16, 27, 53, 0.2);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btnPrimaryHero:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(16, 27, 53, 0.28);
+  background: linear-gradient(135deg, #091024 0%, #172442 100%);
+}
+
+.btnSecondaryHero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 14px 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  transition: all 0.25s ease;
+}
+
+.btnSecondaryHero:hover {
+  background: var(--soft);
+  border-color: var(--muted-light);
+}
+
+/* Wizard Progress Tracker */
+.wizardProgressWrapper {
+  max-width: 600px;
+  margin: 0 auto 36px;
+}
+
+.wizardStepTracker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+
+.trackerStep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.trackerStep .stepNum {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.trackerStep.active {
+  color: var(--blue);
+}
+
+.trackerStep.active .stepNum {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.trackerStep.completed {
+  color: var(--ink);
+}
+
+.trackerStep.completed .stepNum {
+  background: #101b35;
+  color: #fff;
+  border-color: #101b35;
+}
+
+.trackerLine {
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  margin: 0 8px;
+}
+
+/* Step Cards */
+.stepCard {
+  max-width: 960px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
+  box-shadow: var(--shadow-md);
+}
+
+.stepHeader {
+  margin-bottom: 28px;
+}
+
+.stepBadge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--blue);
+  margin-bottom: 8px;
+}
+
+.stepHeader h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(24px, 3.5vw, 32px);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.stepHeader p {
+  color: var(--muted);
+  font-size: 15px;
+  max-width: 650px;
+}
+
+.stepFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.stepFooterInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Step 1: Gender Grid */
+.genderSelectionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.genderCard {
+  position: relative;
+  background: var(--soft);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 32px 28px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.genderCard:hover {
+  transform: translateY(-3px);
+  border-color: var(--muted-light);
+  box-shadow: var(--shadow-md);
+}
+
+.genderCard.selected {
+  background: #ffffff;
+  border-color: var(--blue);
+  box-shadow: 0 10px 30px rgba(70, 105, 232, 0.15);
+}
+
+.genderIconCircle {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.genderCard h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.genderCard p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.selectRadio {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.genderCard.selected .selectRadio {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+/* Step 2: Occasions Grid */
+.occasionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.occasionCard {
+  position: relative;
+  background: var(--soft);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.occasionCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--muted-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.occasionCard.selected {
+  background: #ffffff;
+  border-color: var(--blue);
+  box-shadow: 0 8px 24px rgba(70, 105, 232, 0.12);
+}
+
+.occasionCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.occasionEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.occasionIcon {
+  color: var(--blue);
+}
+
+.occasionCard h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.occasionCard p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.occasionCheck {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  color: var(--blue);
+}
+
+/* Step 3: Style Direction Grid */
+.styleDirectionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.styleDirectionCard {
+  position: relative;
+  background: var(--soft);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.styleDirectionCard:hover {
+  border-color: var(--muted-light);
+  transform: translateY(-2px);
+}
+
+.styleDirectionCard.selected {
+  background: #fff;
+  border-color: var(--blue);
+  box-shadow: 0 10px 28px rgba(70, 105, 232, 0.12);
+}
+
+.styleDirectionHeader .styleTagline {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.styleDirectionHeader h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.styleDirectionCard p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Step 4: Personalization */
+.personalizationSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.prefGroup {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.prefLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.prefHelp {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.prefChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.prefChip {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prefChip:hover {
+  border-color: var(--muted-light);
+}
+
+.prefChip.active {
+  background: #101b35;
+  color: #fff;
+  border-color: #101b35;
+}
+
+/* STEP 5: Results View */
+.resultsContainer {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.resultsHeader {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.resultsEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue);
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.resultsTitle {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.resultsSubtitle {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 600px;
+  margin: 0 auto 20px;
+}
+
+.resultsActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.catalogNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 28px;
+}
+
+/* Outfits Grid */
+.outfitsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.outfitCard {
+  background: #ffffff;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.outfitCard.activeOutfit {
+  border-color: var(--blue);
+  box-shadow: 0 16px 40px rgba(70, 105, 232, 0.16);
+}
+
+.outfitCardHeader {
+  margin-bottom: 20px;
+}
+
+.outfitOptionBadge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 4px;
+}
+
+.outfitSubtitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.outfitExplanation {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.outfitItemsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.outfitProductItem {
+  display: flex;
+  gap: 14px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  align-items: center;
+}
+
+.outfitProductThumb {
+  position: relative;
+  width: 70px;
+  height: 80px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.outfitProductThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.itemCategoryBadge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: rgba(16, 27, 53, 0.75);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.outfitProductMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.outfitProductMeta .productBrand {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.outfitProductMeta .productTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 2px 0;
+}
+
+.outfitProductMeta .productColor {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+}
+
+.outfitProductMeta .productPrice {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+/* Shop This Style Highlight */
+.shopThisStyleSection {
+  background: #ffffff;
+  border: 2px solid var(--blue);
+  border-radius: var(--radius-xl);
+  padding: 32px 36px;
+  box-shadow: var(--shadow-lg);
+  margin-top: 30px;
+}
+
+.shopHeader {
+  margin-bottom: 24px;
+}
+
+.shopHeader h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.shopHeader p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.shopProductsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.shopProductRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+
+.shopProductImg {
+  width: 90px;
+  height: 100px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shopProductImg img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.shopProductInfo {
+  flex: 1;
+}
+
+.shopCategory {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 2px;
+}
+
+.shopProductInfo h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.shopDesc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.shopProductAction {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.shopPriceTag {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.affiliateDisclaimerNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  line-height: 1.5;
+}
+
+/* Auth Page Styling */
+.authPage {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.authCard {
+  max-width: 480px;
+  width: 100%;
+  padding: 36px 32px;
+  border-radius: var(--radius-xl);
+}
+
+.authTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.authTabs {
+  display: flex;
+  gap: 4px;
+  background: var(--soft);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.authTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.authTab.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.authHeader {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.authIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--blue-soft);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.authHeader h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.authHeader p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.authSubmit {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  margin-top: 6px;
+}
+
+.authNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  margin-top: 14px;
+}
+
+.authNotice.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.authNotice.success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.authSecurityNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  justify-content: center;
+  margin-top: 20px;
+}
+
+/* Account Page Styling */
+.accountPage {
+  min-height: 80vh;
+  padding: 40px 0 80px;
+}
+
+.accountTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.accountActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+}
+
+.accountProfileCard {
+  padding: 28px 24px;
+  border-radius: var(--radius-xl);
+  text-align: center;
+}
+
+.profileAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--blue-soft);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.profileMeta h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.profileEmail {
+  font-size: 13px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.roleBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.roleBadge.adminRole {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.roleBadge.userRole {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.accountPrefsCard {
+  padding: 28px 32px;
+  border-radius: var(--radius-xl);
+}
+
+.prefsCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.prefsCardHeader h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.savedPrefsDetails {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.prefItem {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.prefItemLabel {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.prefItem strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.noPrefsPlaceholder {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.noPrefsPlaceholder p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 12px 0 20px;
+}
+
+/* Legal Pages */
+.legalPage {
+  min-height: 80vh;
+  padding: 40px 0 80px;
+}
+
+.legalContent {
+  padding: 40px 48px;
+  border-radius: var(--radius-xl);
+}
+
+.legalHeader {
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.legalHeader h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.legalBody section {
+  margin-bottom: 28px;
+}
+
+.legalBody h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.legalBody p, .legalBody li {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.legalBody ul {
+  padding-left: 20px;
+  margin-top: 8px;
+}
+
+.legalBody li {
+  margin-bottom: 8px;
+}
+
+/* Admin Specific */
+.adminTopRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.genderSelectField {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.adminSelect {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+}
+
+.adminProductRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.adminProductThumb {
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.adminProductThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.adminProductMeta {
+  flex: 1;
+}
+
+.adminProductMeta b {
+  font-size: 13px;
+  display: block;
+}
+
+.adminProductMeta span {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+}
+
+.adminProductMeta small {
+  font-size: 11px;
+  color: var(--muted-light);
+}
+
+.adminProductActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPublished {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.btnUnpublished {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.deleteBtn {
+  color: #ef4444;
+}
+
+.auditTableWrap {
+  overflow-x: auto;
+}
+
+.auditTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.auditTable th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--soft);
+  color: var(--muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+
+.auditTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.outcomeBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.badgeSuccess {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badgeDenied {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.imgPreviewThumb {
+  max-height: 80px;
+  object-fit: contain;
+  margin-top: 8px;
+  border-radius: 6px;
+}
+
+/* Responsive Overrides */
+@media (max-width: 860px) {
+  .genderSelectionGrid,
+  .styleDirectionGrid,
+  .outfitsGrid,
+  .accountGrid,
+  .savedPrefsDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .shopProductRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .shopProductAction {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+

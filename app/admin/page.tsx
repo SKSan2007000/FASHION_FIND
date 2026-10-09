@@ -1,18 +1,449 @@
 'use client';
-import { useEffect,useMemo,useState } from 'react'; import Link from 'next/link'; import Image from 'next/image'; import { ArrowLeft, BarChart3, ExternalLink, LogOut, Plus, Trash2, Upload, Package, Users, Eye, Shirt, Footprints, Watch } from 'lucide-react'; import { initialProducts, Product } from '../../data'; import { parseAmazonSpec } from '../../lib/parser'; import { supabase } from '../../lib/supabase';
-const emptySpec='';
-export default function Admin(){
- const [products,setProducts]=useState<Product[]>(initialProducts); const [image,setImage]=useState(''); const [specText,setSpecText]=useState(emptySpec); const [affiliateUrl,setAffiliateUrl]=useState(''); const [msg,setMsg]=useState(''); const [signed,setSigned]=useState(0); const [visits,setVisits]=useState(0); const [authed,setAuthed]=useState(false); const [loading,setLoading]=useState(true);
- useEffect(()=>{(async()=>{if(supabase){const {data:{session}}=await supabase.auth.getSession(); if(!session){location.href='/auth';return} setAuthed(true); const {data}=await supabase.from('products').select('*').order('created_at',{ascending:false}); if(data?.length){const map=new Map<string,Product>(); [...initialProducts,...(data as Product[])].forEach(p=>map.set(p.id,p)); setProducts([...map.values()]);} const [{count:v},{count:s}]=await Promise.all([supabase.from('site_events').select('*',{count:'exact',head:true}).eq('event_type','visit'),supabase.from('site_events').select('*',{count:'exact',head:true}).eq('event_type','signup')]);setVisits(v||0);setSigned(s||0);} else {if(localStorage.getItem('fashionfind-admin')!=='1'){location.href='/auth';return}setAuthed(true);try{const x=localStorage.getItem('fashionfind-products');if(x)setProducts([...initialProducts,...JSON.parse(x)]);setVisits(Number(localStorage.getItem('ff-visits')||0));setSigned(Number(localStorage.getItem('ff-signins')||0));}catch{}}setLoading(false)})()},[]);
- const uploadImage=(file:File)=>{const reader=new FileReader();reader.onload=()=>setImage(String(reader.result));reader.readAsDataURL(file)};
- const add=async()=>{setMsg(''); if(!image||!specText.trim()||!affiliateUrl.trim()){setMsg('Use the three boxes: upload image, upload/paste Amazon specifications, then paste your affiliate link.');return} const parsed=parseAmazonSpec(specText,affiliateUrl,image); if(!parsed.title||!parsed.brand){setMsg('Could not read the Amazon specifications. Paste the complete specification text.');return}
-  if(supabase){let finalImage=image; if(image.startsWith('data:')){const blob=await fetch(image).then(r=>r.blob());const path=`${parsed.id}-${Date.now()}.jpg`;const up=await supabase.storage.from('products').upload(path,blob,{contentType:blob.type||'image/jpeg',upsert:true});if(up.error){setMsg(up.error.message);return}finalImage=supabase.storage.from('products').getPublicUrl(path).data.publicUrl;} const row={...parsed,image:finalImage}; const {data,error}=await supabase.from('products').insert(row).select().single();if(error){setMsg(error.message);return}setProducts([data as Product,...products]);
-  } else {const extra=products.filter(x=>!initialProducts.some(i=>i.id===x.id));localStorage.setItem('fashionfind-products',JSON.stringify([parsed,...extra]));setProducts([parsed,...products]);}
-  setImage('');setSpecText('');setAffiliateUrl('');setMsg(`${parsed.brand} product published under ${parsed.category}.`);
- };
- const remove=async(id:string)=>{if(initialProducts.some(p=>p.id===id))return; if(supabase) await supabase.from('products').delete().eq('id',id); else {const next=products.filter(p=>p.id!==id);localStorage.setItem('fashionfind-products',JSON.stringify(next.filter(p=>!initialProducts.some(i=>i.id===p.id))))}setProducts(products.filter(p=>p.id!==id));};
- const signout=async()=>{if(supabase)await supabase.auth.signOut();else localStorage.removeItem('fashionfind-admin');location.href='/auth'};
- if(loading||!authed)return <main className="admin"><div className="shell"><div className="empty">Loading dashboard…</div></div></main>;
- const counts=[['Visits',visits,Eye],['Admin sign-ins',signed,Users],['Products',products.length,Package]] as const;
- return <main className="admin"><div className="shell"><div className="adminTop"><Link href="/" className="btn btnLight"><ArrowLeft size={15}/> View site</Link><button className="btn btnLight" onClick={signout}><LogOut size={15}/> Sign out</button></div><div className="sectionHead" style={{marginTop:28}}><div><span className="eyebrow"><BarChart3 size={13}/> Control room</span><h2>FashionFind Admin</h2><p>Add one Amazon find in three simple steps and publish it instantly.</p></div><Link href="/style" className="btn btnDark">Preview Create My Style</Link></div><div className="metricGrid">{counts.map(([label,value,Icon])=><div className="metric glassPanel" key={label}><Icon size={20}/><strong>{value}</strong><span>{label}</span></div>)}</div><div className="adminGrid" style={{marginTop:20}}><div className="glassPanel"><h3 style={{marginTop:0}}>Add a product</h3><p className="muted">Only three inputs. The Amazon text is parsed into a clean description and specification table automatically.</p><div className="threeInputs"><label className="uploadBox"><Upload size={20}/><b>1. Product image</b><span>{image?'Image ready — click to replace':'Upload JPG / PNG / WEBP'}</span><input type="file" accept="image/*" onChange={e=>e.target.files?.[0]&&uploadImage(e.target.files[0])}/>{image&&<img src={image} alt="Preview"/>}</label><label className="uploadBox"><Upload size={20}/><b>2. Amazon specifications</b><span>{specText?'Specification text ready':'Upload .txt/.md or paste below'}</span><input type="file" accept=".txt,.md,.csv" onChange={e=>{const f=e.target.files?.[0];if(f){const r=new FileReader();r.onload=()=>setSpecText(String(r.result));r.readAsText(f)}}}/><textarea value={specText} onChange={e=>setSpecText(e.target.value)} placeholder="Paste the Amazon Style / Item details / Features & Specs / Materials & Care text here…"/></label><label className="uploadBox"><Package size={20}/><b>3. Amazon affiliate link</b><span>Paste the link customers should open</span><input type="url" value={affiliateUrl} onChange={e=>setAffiliateUrl(e.target.value)} placeholder="https://link.amazon/..."/></label></div><button className="btn btnDark publishBtn" onClick={add}><Plus size={16}/> Parse & Publish Product</button>{msg&&<div className="notice" style={{marginTop:12}}>{msg}</div>}<div className="parserNote">The parser detects brand, model, colour, fit, material, care, ASIN and other fields. It also decides whether the item belongs in Men, Women, Shoes or Accessories based on the supplied text.</div></div><div className="glassPanel"><div className="sectionHead" style={{marginBottom:10}}><div><h3 style={{margin:0}}>Live catalog</h3><p>Click a product to preview its public page.</p></div></div>{products.map(p=><div key={p.id} className="adminProduct"><img src={p.image} alt=""/><div className="adminProductInfo"><b>{p.title}</b><span>{p.brand} · {p.category}</span><small>{p.asin||'No ASIN parsed'}</small></div><Link href={`/product/${p.id}`} target="_blank"><ExternalLink size={16}/></Link>{!initialProducts.some(i=>i.id===p.id)&&<button className="iconBtn" onClick={()=>remove(p.id)}><Trash2 size={16}/></button>}</div>)}</div></div><div className="glassPanel traffic"><h3><BarChart3 size={18}/> Traffic & sign-ins</h3><div className="trafficGrid"><div><Eye/><b>{visits}</b><span>Website visits recorded</span></div><div><Users/><b>{signed}</b><span>Admin sign-ins recorded</span></div><div><Package/><b>{products.length}</b><span>Published catalog items</span></div></div>{!supabase&&<div className="notice">Demo mode: counts and added products are stored in this browser. Connect Supabase using the included SQL and environment variables for shared counts, persistent products and real admin authentication across devices.</div>}</div></div></main>
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  BarChart3,
+  ExternalLink,
+  LogOut,
+  Plus,
+  Trash2,
+  Upload,
+  Package,
+  Users,
+  Eye,
+  MousePointerClick,
+  ShieldCheck,
+  CheckCircle,
+  AlertCircle,
+  Sparkles,
+  Activity,
+  Calendar,
+  Lock,
+} from 'lucide-react';
+import { initialProducts, Product, AuditLog } from '../../data';
+import { parseAmazonSpec } from '../../lib/parser';
+import { AnalyticsSummary } from '../../lib/db';
+import { validateAffiliateUrl } from '../../lib/security';
+
+export default function AdminDashboard() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [authed, setAuthed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Add Product Form
+  const [image, setImage] = useState('');
+  const [specText, setSpecText] = useState('');
+  const [affiliateUrl, setAffiliateUrl] = useState('');
+  const [genderInput, setGenderInput] = useState<'MEN' | 'WOMEN' | 'UNISEX'>('MEN');
+  const [formMsg, setFormMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    async function initAdmin() {
+      try {
+        // 1. Verify authenticated session & ADMIN role
+        const meRes = await fetch('/api/auth/me');
+        const meData = await meRes.json();
+
+        if (!meData.authenticated || meData.user?.role !== 'ADMIN') {
+          router.push('/auth');
+          return;
+        }
+
+        setAuthed(true);
+
+        // 2. Fetch admin products
+        const prodRes = await fetch('/api/admin/products');
+        if (prodRes.ok) {
+          const prodData = await prodRes.json();
+          if (prodData.products) setProducts(prodData.products);
+        }
+
+        // 3. Fetch analytics summary
+        const anaRes = await fetch('/api/admin/analytics');
+        if (anaRes.ok) {
+          const anaData = await anaRes.json();
+          if (anaData.analytics) setAnalytics(anaData.analytics);
+        }
+
+        // 4. Fetch audit logs
+        const auditRes = await fetch('/api/admin/audit-logs');
+        if (auditRes.ok) {
+          const auditData = await auditRes.json();
+          if (auditData.logs) setAuditLogs(auditData.logs);
+        }
+      } catch (err) {
+        console.error('Admin init error:', err);
+        router.push('/auth');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initAdmin();
+  }, [router]);
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setImage(data.url);
+        setFormMsg({ text: 'Image uploaded successfully.', type: 'success' });
+      } else {
+        setFormMsg({ text: data.error || 'Failed to upload image.', type: 'error' });
+      }
+    } catch (e) {
+      setFormMsg({ text: 'Image upload failed.', type: 'error' });
+    }
+  };
+
+  const handleAddProduct = async () => {
+    setFormMsg(null);
+    if (!image || !specText.trim() || !affiliateUrl.trim()) {
+      setFormMsg({
+        text: 'Please upload an image, paste Amazon specifications, and enter the affiliate link.',
+        type: 'error',
+      });
+      return;
+    }
+
+    // Client validation of affiliate link
+    const urlCheck = validateAffiliateUrl(affiliateUrl);
+    if (!urlCheck.isValid) {
+      setFormMsg({ text: urlCheck.error || 'Invalid affiliate URL.', type: 'error' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const parsed = parseAmazonSpec(specText, urlCheck.normalizedUrl || affiliateUrl, image);
+      if (!parsed.title || !parsed.brand) {
+        setFormMsg({
+          text: 'Could not parse product details. Please ensure the full specification text is provided.',
+          type: 'error',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = {
+        ...parsed,
+        gender: genderInput,
+      };
+
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setFormMsg({ text: data.error || 'Failed to publish product.', type: 'error' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      setProducts([data.product, ...products]);
+      setImage('');
+      setSpecText('');
+      setAffiliateUrl('');
+      setFormMsg({
+        text: `Product "${data.product.title}" published successfully under ${data.product.category}.`,
+        type: 'success',
+      });
+    } catch (err) {
+      setFormMsg({ text: 'Server error while publishing product.', type: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+      const res = await fetch(`/api/admin/products?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setProducts(products.filter((p) => p.id !== id));
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+    }
+  };
+
+  const handleTogglePublish = async (product: Product) => {
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: product.id, published: !product.published }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(products.map((p) => (p.id === product.id ? data.product : p)));
+      }
+    } catch (err) {
+      console.error('Toggle error:', err);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/auth');
+  };
+
+  if (loading || !authed) {
+    return (
+      <main className="admin">
+        <div className="shell">
+          <div className="glassPanel accountLoading">Verifying administrator credentials…</div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="admin">
+      <div className="shell">
+        {/* Top bar */}
+        <div className="adminTop">
+          <Link href="/" className="btn btnLight">
+            <ArrowLeft size={15} /> View Site
+          </Link>
+          <div className="adminTopRight">
+            <Link href="/style" className="btn btnLight">
+              <Sparkles size={15} /> Choose My Fashion
+            </Link>
+            <button className="btn btnLight" onClick={handleSignOut}>
+              <LogOut size={15} /> Sign out
+            </button>
+          </div>
+        </div>
+
+        {/* Header */}
+        <div className="sectionHead" style={{ marginTop: 24 }}>
+          <div>
+            <span className="eyebrow">
+              <BarChart3 size={13} /> CONTROL ROOM & AUDIT
+            </span>
+            <h2>FashionFind Admin Dashboard</h2>
+            <p>
+              Genuine catalog management, server-side RBAC, and real-time site analytics.
+            </p>
+          </div>
+        </div>
+
+        {/* Analytics Metric Grid */}
+        <div className="metricGrid">
+          <div className="metric glassPanel">
+            <Eye size={22} className="metricIcon" />
+            <strong>{analytics?.totalVisits ?? 0}</strong>
+            <span>Recorded Visits</span>
+          </div>
+          <div className="metric glassPanel">
+            <Users size={22} className="metricIcon" />
+            <strong>{analytics?.totalUsers ?? 0}</strong>
+            <span>Registered Users</span>
+          </div>
+          <div className="metric glassPanel">
+            <MousePointerClick size={22} className="metricIcon" />
+            <strong>{analytics?.totalAffiliateClicks ?? 0}</strong>
+            <span>Affiliate Clicks</span>
+          </div>
+          <div className="metric glassPanel">
+            <Package size={22} className="metricIcon" />
+            <strong>{products.length}</strong>
+            <span>Catalog Items</span>
+          </div>
+        </div>
+
+        {/* 2-Column Grid: Add Product & Live Catalog */}
+        <div className="adminGrid" style={{ marginTop: 24 }}>
+          {/* Add Product Box */}
+          <div className="glassPanel">
+            <div className="panelHeader">
+              <h3>
+                <Plus size={18} /> Add Catalog Product
+              </h3>
+              <p className="muted">
+                Paste Amazon specifications and affiliate URL. Metadata and category fields are
+                extracted automatically.
+              </p>
+            </div>
+
+            <div className="threeInputs">
+              {/* 1. Image Upload */}
+              <label className="uploadBox">
+                <Upload size={20} />
+                <b>1. Product Image</b>
+                <span>{image ? 'Image ready — click to replace' : 'Upload JPG / PNG / WEBP'}</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                />
+                {image && <img src={image} alt="Preview" className="imgPreviewThumb" />}
+              </label>
+
+              {/* 2. Amazon Specs */}
+              <label className="uploadBox">
+                <Upload size={20} />
+                <b>2. Amazon Specifications</b>
+                <span>{specText ? 'Specifications entered' : 'Upload .txt or paste below'}</span>
+                <textarea
+                  value={specText}
+                  onChange={(e) => setSpecText(e.target.value)}
+                  placeholder="Paste the Amazon Style / Item details / Features & Specs text here…"
+                />
+              </label>
+
+              {/* 3. Affiliate Link */}
+              <label className="uploadBox">
+                <Package size={20} />
+                <b>3. Amazon Affiliate Link</b>
+                <span>Verified Amazon associate URL</span>
+                <input
+                  type="url"
+                  value={affiliateUrl}
+                  onChange={(e) => setAffiliateUrl(e.target.value)}
+                  placeholder="https://link.amazon/... or https://www.amazon.in/dp/..."
+                />
+              </label>
+
+              {/* Gender selector for product */}
+              <div className="genderSelectField">
+                <label>Target Gender:</label>
+                <select
+                  value={genderInput}
+                  onChange={(e) => setGenderInput(e.target.value as any)}
+                  className="adminSelect"
+                >
+                  <option value="MEN">Men</option>
+                  <option value="WOMEN">Women</option>
+                  <option value="UNISEX">Unisex</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              className="btn btnDark publishBtn"
+              onClick={handleAddProduct}
+              disabled={isSubmitting}
+            >
+              <Plus size={16} /> {isSubmitting ? 'Parsing & Publishing…' : 'Parse & Publish Product'}
+            </button>
+
+            {formMsg && (
+              <div className={`notice ${formMsg.type === 'error' ? 'noticeError' : 'noticeSuccess'}`}>
+                {formMsg.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle size={16} />}
+                <span>{formMsg.text}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Live Catalog Table */}
+          <div className="glassPanel">
+            <div className="panelHeader">
+              <h3>Live Catalog ({products.length})</h3>
+              <p>Manage genuine products and publication visibility.</p>
+            </div>
+
+            <div className="adminProductList">
+              {products.map((p) => (
+                <div key={p.id} className="adminProductRow">
+                  <div className="adminProductThumb">
+                    <img src={p.image} alt="" />
+                  </div>
+                  <div className="adminProductMeta">
+                    <b>{p.title}</b>
+                    <span>
+                      {p.brand} · {p.category} ({p.gender || 'MEN'})
+                    </span>
+                    <small>ASIN: {p.asin || 'N/A'}</small>
+                  </div>
+                  <div className="adminProductActions">
+                    <button
+                      className={`btn ${p.published !== false ? 'btnPublished' : 'btnUnpublished'}`}
+                      onClick={() => handleTogglePublish(p)}
+                      title="Toggle visibility"
+                    >
+                      {p.published !== false ? 'Live' : 'Draft'}
+                    </button>
+                    <Link href={`/product/${p.id}`} target="_blank" className="iconBtn">
+                      <ExternalLink size={15} />
+                    </Link>
+                    <button className="iconBtn deleteBtn" onClick={() => handleDeleteProduct(p.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Security Audit Log Table */}
+        <div className="glassPanel auditLogSection" style={{ marginTop: 24 }}>
+          <div className="panelHeader">
+            <h3>
+              <Activity size={18} /> Security & Administrative Audit Logs
+            </h3>
+            <p>Immutable server-side recorded events, logins, and mutations.</p>
+          </div>
+
+          {auditLogs.length > 0 ? (
+            <div className="auditTableWrap">
+              <table className="auditTable">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Actor</th>
+                    <th>Outcome</th>
+                    <th>Target</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.slice(0, 15).map((log, i) => (
+                    <tr key={log.id || i}>
+                      <td>{log.created_at ? new Date(log.created_at).toLocaleString() : 'Recent'}</td>
+                      <td>
+                        <code>{log.action}</code>
+                      </td>
+                      <td>{log.actor_email || 'System / Anonymous'}</td>
+                      <td>
+                        <span
+                          className={`outcomeBadge ${log.outcome === 'SUCCESS' ? 'badgeSuccess' : 'badgeDenied'}`}
+                        >
+                          {log.outcome}
+                        </span>
+                      </td>
+                      <td>{log.target_resource || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="noAuditLogs">No audit logs recorded yet.</div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
 }

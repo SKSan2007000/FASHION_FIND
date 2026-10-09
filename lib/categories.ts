@@ -49,7 +49,7 @@ export const STYLE_CATEGORIES: CategoryInfo[] = [
 /**
  * Normalizes any product into one of the four supported style-builder categories:
  * TOP, BOTTOM, SHOES, or ACCESSORY.
- * 
+ *
  * Strict categorization rules:
  * 1. Shoes/Footwear are identified first.
  * 2. Bottoms (jeans, pants, trousers, shorts, skirts, chinos) are identified next.
@@ -141,15 +141,21 @@ export function normalizeStyleCategory(
   return null;
 }
 
-export type ProductGender = 'MEN' | 'WOMEN';
+export type StrictProductGender = 'MEN' | 'WOMEN' | 'UNISEX' | 'UNKNOWN';
 
 /**
- * Normalizes product gender based on category, title, description, and specs.
+ * Normalizes product gender strictly based on verified category, title, description, and specs.
+ * If gender is unknown or conflicting, returns 'UNKNOWN' so it can be excluded from gender-specific
+ * recommendations until metadata is corrected.
  */
 export function normalizeProductGender(
   product: Partial<Product> | null | undefined
-): ProductGender {
-  if (!product) return 'MEN';
+): StrictProductGender {
+  if (!product) return 'UNKNOWN';
+
+  if (product.gender === 'MEN' || product.gender === 'WOMEN' || product.gender === 'UNISEX') {
+    return product.gender;
+  }
 
   const category = (product.category || '').toLowerCase();
   const title = (product.title || '').toLowerCase();
@@ -157,9 +163,23 @@ export function normalizeProductGender(
   const specs = (product.specs || []).map((s) => `${s.label}:${s.value}`).join(' ').toLowerCase();
   const allText = `${category} ${title} ${description} ${specs}`;
 
-  if (/\b(women|women's|woman|ladies|lady|female|girls|girl|kurti|saree|lehenga|skirt|blouse)\b/i.test(allText)) {
+  const isWomen = /\b(women|women's|womens|woman|ladies|lady|female|girls|girl|kurti|saree|lehenga|skirt|blouse)\b/i.test(allText);
+  const isMen = /\b(men|men's|mens|man|gentlemen|gents|male|boys|boy)\b/i.test(allText);
+
+  if (isWomen && !isMen) {
     return 'WOMEN';
   }
+  if (isMen && !isWomen) {
+    return 'MEN';
+  }
+  if (isWomen && isMen) {
+    // Both mentioned or unisex
+    return 'UNISEX';
+  }
 
-  return 'MEN';
+  // Check category prefix
+  if (category.startsWith("men's") || category.startsWith("mens")) return 'MEN';
+  if (category.startsWith("women's") || category.startsWith("womens")) return 'WOMEN';
+
+  return 'UNKNOWN';
 }
