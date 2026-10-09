@@ -361,7 +361,20 @@ export async function findUserByEmail(email: string): Promise<{ user: User; pass
 
   if (isPgConfigured()) {
     try {
-      const res = await pgQuery(`SELECT * FROM public.users WHERE email = $1`, [normalized]);
+      const sql = `
+        SELECT 
+          u.id, u.name, u.email, u.password_hash,
+          COALESCE(u.status, 'active') as status,
+          u.email_verified, u.email_verified_at,
+          u.created_at, u.updated_at, u.last_login_at,
+          COALESCE(r.name, u.role, 'USER') as effective_role
+        FROM public.users u
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id
+        LEFT JOIN public.roles r ON ur.role_id = r.id
+        WHERE LOWER(u.email) = LOWER($1)
+        LIMIT 1;
+      `;
+      const res = await pgQuery(sql, [normalized]);
       if (res.rows.length > 0) {
         const r = res.rows[0];
         return {
@@ -369,10 +382,13 @@ export async function findUserByEmail(email: string): Promise<{ user: User; pass
             id: r.id,
             email: r.email,
             name: r.name,
-            role: r.role as 'USER' | 'ADMIN',
-            account_status: r.account_status,
-            created_at: r.created_at,
-            updated_at: r.updated_at,
+            role: (r.effective_role || 'USER') as 'USER' | 'ADMIN',
+            account_status: r.status || 'active',
+            email_verified: Boolean(r.email_verified),
+            email_verified_at: r.email_verified_at ? new Date(r.email_verified_at).toISOString() : undefined,
+            last_login_at: r.last_login_at ? new Date(r.last_login_at).toISOString() : undefined,
+            created_at: r.created_at ? new Date(r.created_at).toISOString() : undefined,
+            updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
           },
           passwordHash: r.password_hash,
         };
@@ -396,8 +412,11 @@ export async function findUserByEmail(email: string): Promise<{ user: User; pass
             id: data.id,
             email: data.email,
             name: data.name,
-            role: data.role as 'USER' | 'ADMIN',
-            account_status: data.account_status,
+            role: (data.role || 'USER') as 'USER' | 'ADMIN',
+            account_status: data.status || data.account_status || 'active',
+            email_verified: Boolean(data.email_verified),
+            email_verified_at: data.email_verified_at,
+            last_login_at: data.last_login_at,
             created_at: data.created_at,
             updated_at: data.updated_at,
           },
@@ -419,19 +438,37 @@ export async function findUserByEmail(email: string): Promise<{ user: User; pass
 }
 
 export async function findUserById(id: string): Promise<User | null> {
+  if (!id) return null;
+
   if (isPgConfigured()) {
     try {
-      const res = await pgQuery(`SELECT * FROM public.users WHERE id = $1`, [id]);
+      const sql = `
+        SELECT 
+          u.id, u.name, u.email,
+          COALESCE(u.status, 'active') as status,
+          u.email_verified, u.email_verified_at,
+          u.created_at, u.updated_at, u.last_login_at,
+          COALESCE(r.name, u.role, 'USER') as effective_role
+        FROM public.users u
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id
+        LEFT JOIN public.roles r ON ur.role_id = r.id
+        WHERE u.id = $1
+        LIMIT 1;
+      `;
+      const res = await pgQuery(sql, [id]);
       if (res.rows.length > 0) {
         const r = res.rows[0];
         return {
           id: r.id,
           email: r.email,
           name: r.name,
-          role: r.role as 'USER' | 'ADMIN',
-          account_status: r.account_status,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
+          role: (r.effective_role || 'USER') as 'USER' | 'ADMIN',
+          account_status: r.status || 'active',
+          email_verified: Boolean(r.email_verified),
+          email_verified_at: r.email_verified_at ? new Date(r.email_verified_at).toISOString() : undefined,
+          last_login_at: r.last_login_at ? new Date(r.last_login_at).toISOString() : undefined,
+          created_at: r.created_at ? new Date(r.created_at).toISOString() : undefined,
+          updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
         };
       }
     } catch (e) {
@@ -447,8 +484,11 @@ export async function findUserById(id: string): Promise<User | null> {
           id: data.id,
           email: data.email,
           name: data.name,
-          role: data.role as 'USER' | 'ADMIN',
-          account_status: data.account_status,
+          role: (data.role || 'USER') as 'USER' | 'ADMIN',
+          account_status: data.status || data.account_status || 'active',
+          email_verified: Boolean(data.email_verified),
+          email_verified_at: data.email_verified_at,
+          last_login_at: data.last_login_at,
           created_at: data.created_at,
           updated_at: data.updated_at,
         };
@@ -474,34 +514,42 @@ export async function createUser(params: {
   const normalized = params.email.toLowerCase().trim();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  const assignedRole = params.role || 'USER';
 
   const user: User = {
     id,
     email: normalized,
     name: params.name || null,
-    role: params.role || 'USER',
+    role: assignedRole,
     account_status: 'active',
+    email_verified: false,
     created_at: now,
     updated_at: now,
   };
 
   if (isPgConfigured()) {
     try {
-      const sql = `
-        INSERT INTO public.users (id, email, password_hash, name, role, account_status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      // 1. Insert user
+      const sqlUser = `
+        INSERT INTO public.users (id, email, password_hash, name, role, status, email_verified, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, 'active', false, $6, $7)
         RETURNING *;
       `;
-      const res = await pgQuery(sql, [
+      const res = await pgQuery(sqlUser, [
         id,
         normalized,
         params.passwordHash,
         params.name || null,
-        params.role || 'USER',
-        'active',
+        assignedRole,
         now,
         now,
       ]);
+
+      // 2. Map role in user_roles table
+      const roleRow = await pgQuery(`SELECT id FROM public.roles WHERE name = $1`, [assignedRole]);
+      const roleId = roleRow.rows[0]?.id || (assignedRole === 'ADMIN' ? 2 : 1);
+      await pgQuery(`INSERT INTO public.user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [id, roleId]);
+
       if (res.rows.length > 0) {
         localStore.users.set(normalized, user);
         localStore.userPasswords.set(normalized, params.passwordHash);
@@ -521,8 +569,9 @@ export async function createUser(params: {
           email: normalized,
           password_hash: params.passwordHash,
           name: params.name || null,
-          role: params.role || 'USER',
-          account_status: 'active',
+          role: assignedRole,
+          status: 'active',
+          email_verified: false,
           created_at: now,
           updated_at: now,
         })
@@ -542,6 +591,94 @@ export async function createUser(params: {
   localStore.users.set(normalized, user);
   localStore.userPasswords.set(normalized, params.passwordHash);
   return user;
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  if (isPgConfigured()) {
+    try {
+      await pgQuery(`UPDATE public.users SET password_hash = $1, updated_at = $2 WHERE id = $3`, [
+        passwordHash,
+        now,
+        userId,
+      ]);
+      return true;
+    } catch (e) {
+      console.error('PostgreSQL updateUserPassword error:', e);
+    }
+  }
+
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ password_hash: passwordHash, updated_at: now })
+        .eq('id', userId);
+      if (!error) return true;
+    } catch (e) {
+      console.error('Supabase updateUserPassword error:', e);
+    }
+  }
+
+  for (const [email, u] of localStore.users.entries()) {
+    if (u.id === userId) {
+      localStore.userPasswords.set(email, passwordHash);
+      return true;
+    }
+  }
+
+  return true;
+}
+
+export async function verifyUserEmail(userId: string): Promise<boolean> {
+  const now = new Date().toISOString();
+
+  if (isPgConfigured()) {
+    try {
+      await pgQuery(
+        `UPDATE public.users SET email_verified = true, email_verified_at = $1, updated_at = $2 WHERE id = $3`,
+        [now, now, userId]
+      );
+      return true;
+    } catch (e) {
+      console.error('PostgreSQL verifyUserEmail error:', e);
+    }
+  }
+
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ email_verified: true, email_verified_at: now, updated_at: now })
+        .eq('id', userId);
+      if (!error) return true;
+    } catch (e) {
+      console.error('Supabase verifyUserEmail error:', e);
+    }
+  }
+
+  for (const u of localStore.users.values()) {
+    if (u.id === userId) {
+      u.email_verified = true;
+      u.email_verified_at = now;
+      return true;
+    }
+  }
+
+  return true;
+}
+
+export async function updateUserLastLogin(userId: string): Promise<void> {
+  const now = new Date().toISOString();
+
+  if (isPgConfigured()) {
+    try {
+      await pgQuery(`UPDATE public.users SET last_login_at = $1 WHERE id = $2`, [now, userId]);
+    } catch (e) {
+      console.error('PostgreSQL updateUserLastLogin error:', e);
+    }
+  }
 }
 
 export async function countUsers(): Promise<number> {
@@ -565,6 +702,181 @@ export async function countUsers(): Promise<number> {
     }
   }
   return localStore.users.size;
+}
+
+export async function getAllUsers(limit: number = 100): Promise<User[]> {
+  if (isPgConfigured()) {
+    try {
+      const sql = `
+        SELECT 
+          u.id, u.name, u.email,
+          COALESCE(u.status, 'active') as status,
+          u.email_verified, u.email_verified_at,
+          u.created_at, u.updated_at, u.last_login_at,
+          COALESCE(r.name, u.role, 'USER') as effective_role
+        FROM public.users u
+        LEFT JOIN public.user_roles ur ON u.id = ur.user_id
+        LEFT JOIN public.roles r ON ur.role_id = r.id
+        ORDER BY u.created_at DESC
+        LIMIT $1;
+      `;
+      const res = await pgQuery(sql, [limit]);
+      return res.rows.map((r) => ({
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        role: (r.effective_role || 'USER') as 'USER' | 'ADMIN',
+        account_status: r.status || 'active',
+        email_verified: Boolean(r.email_verified),
+        email_verified_at: r.email_verified_at ? new Date(r.email_verified_at).toISOString() : undefined,
+        last_login_at: r.last_login_at ? new Date(r.last_login_at).toISOString() : undefined,
+        created_at: r.created_at ? new Date(r.created_at).toISOString() : undefined,
+        updated_at: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
+      }));
+    } catch (e) {
+      console.error('PostgreSQL getAllUsers error:', e);
+    }
+  }
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role, status, email_verified, email_verified_at, created_at, updated_at, last_login_at')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (!error && data) {
+        return (data as any[]).map((r) => ({
+          id: r.id,
+          email: r.email,
+          name: r.name,
+          role: (r.role || 'USER') as 'USER' | 'ADMIN',
+          account_status: r.status || 'active',
+          email_verified: Boolean(r.email_verified),
+          email_verified_at: r.email_verified_at,
+          last_login_at: r.last_login_at,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        }));
+      }
+    } catch (e) {
+      console.error('Supabase getAllUsers error:', e);
+    }
+  }
+
+  return Array.from(localStore.users.values()).slice(0, limit);
+}
+
+/**
+ * ====================================================================
+ * VERIFICATION & PASSWORD RESET TOKENS (SHA-256 Hashed)
+ * ====================================================================
+ */
+
+interface LocalTokenRecord {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  tokenType: 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
+  expiresAt: Date;
+  usedAt?: Date | null;
+}
+const localTokenStore = new Map<string, LocalTokenRecord>();
+
+export async function createVerificationToken(params: {
+  userId: string;
+  tokenType: 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
+  expiryMinutes?: number;
+}): Promise<{ rawToken: string; expiresAt: Date }> {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const expiryMinutes = params.expiryMinutes || (params.tokenType === 'PASSWORD_RESET' ? 60 : 1440); // 1 hr for reset, 24 hr for email
+  const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+  const id = crypto.randomUUID();
+
+  if (isPgConfigured()) {
+    try {
+      const sql = `
+        INSERT INTO public.verification_tokens (id, user_id, token_hash, token_type, expires_at, created_at)
+        VALUES ($1, $2, $3, $4, $5, now());
+      `;
+      await pgQuery(sql, [id, params.userId, tokenHash, params.tokenType, expiresAt.toISOString()]);
+      return { rawToken, expiresAt };
+    } catch (e) {
+      console.error('PostgreSQL createVerificationToken error:', e);
+    }
+  }
+
+  localTokenStore.set(tokenHash, {
+    id,
+    userId: params.userId,
+    tokenHash,
+    tokenType: params.tokenType,
+    expiresAt,
+    usedAt: null,
+  });
+
+  return { rawToken, expiresAt };
+}
+
+export async function consumeVerificationToken(params: {
+  rawToken: string;
+  tokenType: 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
+}): Promise<{ valid: boolean; userId?: string; error?: string }> {
+  if (!params.rawToken) {
+    return { valid: false, error: 'Token is required.' };
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(params.rawToken).digest('hex');
+
+  if (isPgConfigured()) {
+    try {
+      const sql = `
+        SELECT id, user_id, expires_at, used_at
+        FROM public.verification_tokens
+        WHERE token_hash = $1 AND token_type = $2
+        ORDER BY created_at DESC
+        LIMIT 1;
+      `;
+      const res = await pgQuery(sql, [tokenHash, params.tokenType]);
+
+      if (res.rows.length === 0) {
+        return { valid: false, error: 'Invalid or expired token.' };
+      }
+
+      const row = res.rows[0];
+      if (row.used_at) {
+        return { valid: false, error: 'This token has already been used.' };
+      }
+
+      if (new Date(row.expires_at).getTime() < Date.now()) {
+        return { valid: false, error: 'This token has expired. Please request a new one.' };
+      }
+
+      // Mark as used
+      await pgQuery(`UPDATE public.verification_tokens SET used_at = now() WHERE id = $1`, [row.id]);
+
+      return { valid: true, userId: row.user_id };
+    } catch (e) {
+      console.error('PostgreSQL consumeVerificationToken error:', e);
+      return { valid: false, error: 'Failed to verify token against database.' };
+    }
+  }
+
+  const record = localTokenStore.get(tokenHash);
+  if (!record || record.tokenType !== params.tokenType) {
+    return { valid: false, error: 'Invalid or expired token.' };
+  }
+  if (record.usedAt) {
+    return { valid: false, error: 'This token has already been used.' };
+  }
+  if (record.expiresAt.getTime() < Date.now()) {
+    return { valid: false, error: 'This token has expired.' };
+  }
+
+  record.usedAt = new Date();
+  return { valid: true, userId: record.userId };
 }
 
 /**
@@ -880,12 +1192,16 @@ export async function recordAuditLog(log: AuditLog): Promise<void> {
 
   if (isPgConfigured()) {
     try {
+      const isValidUuid =
+        row.actor_id &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.actor_id);
+
       const sql = `
-        INSERT INTO public.audit_logs (actor_id, actor_email, action, target_resource, outcome, details, created_at)
+        INSERT INTO public.audit_logs (actor_user_id, actor_email, action, resource_id, outcome, metadata, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
       `;
       await pgQuery(sql, [
-        row.actor_id || null,
+        isValidUuid ? row.actor_id : null,
         row.actor_email || null,
         row.action,
         row.target_resource || null,
@@ -920,12 +1236,12 @@ export async function getAuditLogs(limit: number = 50): Promise<AuditLog[]> {
       const res = await pgQuery(`SELECT * FROM public.audit_logs ORDER BY created_at DESC LIMIT $1`, [limit]);
       return res.rows.map((r) => ({
         id: Number(r.id),
-        actor_id: r.actor_id,
+        actor_id: r.actor_user_id || r.actor_id,
         actor_email: r.actor_email,
         action: r.action,
-        target_resource: r.target_resource,
+        target_resource: r.resource_id || r.target_resource,
         outcome: r.outcome as 'SUCCESS' | 'DENIED' | 'ERROR',
-        details: typeof r.details === 'string' ? JSON.parse(r.details) : r.details,
+        details: typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || r.details || {},
         created_at: r.created_at ? new Date(r.created_at).toISOString() : undefined,
       }));
     } catch (e) {

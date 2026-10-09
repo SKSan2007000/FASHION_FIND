@@ -61,7 +61,7 @@ export function getPgPool(): Pool | null {
   const user = process.env.DB_USER || 'postgres';
   const password = process.env.DB_PASSWORD ?? process.env.PGPASSWORD;
 
-  if (user && database && password !== undefined) {
+  if (user && database && password !== undefined && String(password).trim().length > 0) {
     const config: PoolConfig = {
       host,
       port,
@@ -87,10 +87,14 @@ export function getPgPool(): Pool | null {
 
 export function isPgConfigured(): boolean {
   loadLocalEnv();
+  if (process.env.DATABASE_URL || process.env.POSTGRES_URL) return true;
+  const pwd = process.env.DB_PASSWORD ?? process.env.PGPASSWORD;
   return Boolean(
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    (process.env.DB_USER && process.env.DB_NAME && (process.env.DB_PASSWORD !== undefined || process.env.PGPASSWORD !== undefined))
+    process.env.DB_USER &&
+    process.env.DB_NAME &&
+    pwd !== undefined &&
+    pwd !== null &&
+    String(pwd).trim().length > 0
   );
 }
 

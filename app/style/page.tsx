@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import {
   Sparkles,
   ArrowLeft,
@@ -13,12 +13,10 @@ import {
   ExternalLink,
   ShieldCheck,
   Heart,
-  Sliders,
   Bookmark,
   Info,
   ChevronRight,
   Shirt,
-  Calendar,
   Layers,
   Palette,
   DollarSign,
@@ -33,7 +31,7 @@ import {
   Flame,
   Utensils,
 } from 'lucide-react';
-import { initialProducts, Product, ProductGender } from '../../data';
+import { initialProducts, Product } from '../../data';
 import {
   OCCASIONS_DATA,
   STYLE_DIRECTIONS,
@@ -41,11 +39,9 @@ import {
   SKIN_TONE_OPTIONS,
   OccasionType,
   StyleDirection,
-  OutfitCombination,
   RecommendationResult,
   generateSmartRecommendations,
 } from '../../lib/recommendations';
-import { normalizeProductGender } from '../../lib/categories';
 
 // Map icon names to Lucide icons
 const OCCASION_ICONS: Record<string, React.ElementType> = {
@@ -80,7 +76,8 @@ const BUDGET_OPTIONS = [
   'Above ₹6,000',
 ];
 
-export default function ChooseMyFashionPage() {
+function ChooseMyFashionContent() {
+  const searchParams = useSearchParams();
   const [catalog, setCatalog] = useState<Product[]>(initialProducts);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
 
@@ -102,6 +99,21 @@ export default function ChooseMyFashionPage() {
 
   const wizardRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  // Parse query params if provided
+  useEffect(() => {
+    const occ = searchParams.get('occasion');
+    if (occ) {
+      const match = OCCASIONS_DATA.find((o) => o.id.toLowerCase() === occ.toLowerCase());
+      if (match) {
+        setOccasion(match.id);
+      }
+    }
+    const g = searchParams.get('gender');
+    if (g === 'MEN' || g === 'WOMEN') {
+      setGender(g);
+    }
+  }, [searchParams]);
 
   // 1. Fetch live catalog from database
   useEffect(() => {
@@ -128,7 +140,6 @@ export default function ChooseMyFashionPage() {
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      // Direct client calculation using verified catalog or call recommendation API
       const res = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -150,7 +161,6 @@ export default function ChooseMyFashionPage() {
           setSelectedOutfitId(data.outfits[0].id);
         }
       } else {
-        // Fallback to local recommendation engine
         const fallback = generateSmartRecommendations(catalog, {
           gender,
           occasion,
@@ -166,7 +176,7 @@ export default function ChooseMyFashionPage() {
         }
       }
 
-      setStep(5); // Show results view
+      setStep(5);
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -193,7 +203,7 @@ export default function ChooseMyFashionPage() {
 
   // 3. Save preferences to user account
   const handleSavePreferences = async () => {
-    setSaveStatus('Saving...');
+    setSaveStatus('Saving…');
     try {
       const res = await fetch('/api/preferences', {
         method: 'POST',
@@ -230,7 +240,7 @@ export default function ChooseMyFashionPage() {
         <div className="shell">
           <div className="chooseHeroContent">
             <div className="eyebrowBadge">
-              <Sparkles size={14} /> AI & METADATA-POWERED STYLING
+              <Sparkles size={14} /> SMART OUTFIT STYLING
             </div>
             <h1 className="chooseHeroTitle">CHOOSE YOUR FASHION</h1>
             <p className="chooseHeroSubtitle">
@@ -310,7 +320,6 @@ export default function ChooseMyFashionPage() {
                   className={`genderCard ${gender === 'MEN' ? 'selected' : ''}`}
                   onClick={() => setGender('MEN')}
                 >
-                  <div className="genderCardGlow" />
                   <div className="genderIconCircle">
                     <Shirt size={28} />
                   </div>
@@ -325,7 +334,6 @@ export default function ChooseMyFashionPage() {
                   className={`genderCard ${gender === 'WOMEN' ? 'selected' : ''}`}
                   onClick={() => setGender('WOMEN')}
                 >
-                  <div className="genderCardGlow" />
                   <div className="genderIconCircle">
                     <Sparkles size={28} />
                   </div>
@@ -339,7 +347,7 @@ export default function ChooseMyFashionPage() {
 
               <div className="stepFooter">
                 <div className="stepFooterInfo">
-                  <ShieldCheck size={16} className="textMuted" /> Strict catalog metadata filtering.
+                  <ShieldCheck size={16} style={{ color: '#2563eb' }} /> Strict catalog metadata filtering.
                 </div>
                 <button className="btn btnDark" onClick={() => setStep(2)}>
                   Continue to Occasion <ArrowRight size={16} />
@@ -376,7 +384,7 @@ export default function ChooseMyFashionPage() {
                       <h3>{occ.name}</h3>
                       <p>{occ.description}</p>
                       <div className="occasionCheck">
-                        {isSelected && <Check size={14} />}
+                        {isSelected && <Check size={14} style={{ color: '#2563eb' }} />}
                       </div>
                     </div>
                   );
@@ -412,13 +420,11 @@ export default function ChooseMyFashionPage() {
                       className={`styleDirectionCard ${isSelected ? 'selected' : ''}`}
                       onClick={() => setStyleDirection(dir.id)}
                     >
-                      <div className="styleDirectionHeader">
-                        <span className="styleTagline">{dir.tagline}</span>
-                        <h3>{dir.title}</h3>
-                      </div>
+                      <span className="styleTagline">{dir.tagline}</span>
+                      <h3>{dir.title}</h3>
                       <p>{dir.description}</p>
                       <div className="styleDirectionRadio">
-                        {isSelected ? <Check size={16} /> : null}
+                        {isSelected ? <Check size={16} style={{ color: '#2563eb' }} /> : null}
                       </div>
                     </div>
                   );
@@ -655,16 +661,14 @@ export default function ChooseMyFashionPage() {
               {selectedOutfit && (
                 <div className="shopThisStyleSection animateFadeIn">
                   <div className="shopHeader">
-                    <div>
-                      <span className="eyebrow">
-                        <ShoppingBag size={14} /> DIRECT AFFILIATE SHOPPING
-                      </span>
-                      <h3>SHOP THIS STYLE — {selectedOutfit.title}</h3>
-                      <p>
-                        Shop each individual piece directly on Amazon using its verified affiliate
-                        link.
-                      </p>
-                    </div>
+                    <span className="eyebrow">
+                      <ShoppingBag size={14} /> DIRECT AFFILIATE SHOPPING
+                    </span>
+                    <h3>SHOP THIS STYLE — {selectedOutfit.title}</h3>
+                    <p>
+                      Shop each individual piece directly on Amazon using its verified affiliate
+                      link.
+                    </p>
                   </div>
 
                   <div className="shopProductsList">
@@ -716,7 +720,7 @@ export default function ChooseMyFashionPage() {
                   </div>
 
                   <div className="affiliateDisclaimerNotice">
-                    <ShieldCheck size={16} />
+                    <ShieldCheck size={16} style={{ color: '#2563eb', flexShrink: 0, marginTop: 2 }} />
                     <span>
                       FashionFind may earn a commission from qualifying purchases made through affiliate
                       links, at no additional cost to you. Product prices, sizes, and stock are
@@ -730,5 +734,13 @@ export default function ChooseMyFashionPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function ChooseMyFashionPage() {
+  return (
+    <Suspense fallback={<div className="shell" style={{ padding: '60px 0', textAlign: 'center' }}>Loading Choose My Fashion…</div>}>
+      <ChooseMyFashionContent />
+    </Suspense>
   );
 }

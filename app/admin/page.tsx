@@ -30,6 +30,7 @@ import { validateAffiliateUrl } from '../../lib/security';
 
 export default function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [authed, setAuthed] = useState(false);
@@ -49,39 +50,61 @@ export default function AdminDashboard() {
     async function initAdmin() {
       try {
         // 1. Verify authenticated session & ADMIN role
-        const meRes = await fetch('/api/auth/me');
+        const meRes = await fetch('/api/auth/me', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
         const meData = await meRes.json();
 
-        if (!meData.authenticated || meData.user?.role !== 'ADMIN') {
-          router.push('/auth');
+        if (!meRes.ok || !meData.authenticated || meData.user?.role !== 'ADMIN') {
+          window.location.href = '/auth';
           return;
         }
 
         setAuthed(true);
 
         // 2. Fetch admin products
-        const prodRes = await fetch('/api/admin/products');
+        const prodRes = await fetch('/api/admin/products', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
         if (prodRes.ok) {
           const prodData = await prodRes.json();
           if (prodData.products) setProducts(prodData.products);
         }
 
-        // 3. Fetch analytics summary
-        const anaRes = await fetch('/api/admin/analytics');
+        // 3. Fetch registered users
+        const usersRes = await fetch('/api/admin/users', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          if (usersData.users) setRegisteredUsers(usersData.users);
+        }
+
+        // 4. Fetch analytics summary
+        const anaRes = await fetch('/api/admin/analytics', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
         if (anaRes.ok) {
           const anaData = await anaRes.json();
           if (anaData.analytics) setAnalytics(anaData.analytics);
         }
 
-        // 4. Fetch audit logs
-        const auditRes = await fetch('/api/admin/audit-logs');
+        // 5. Fetch audit logs
+        const auditRes = await fetch('/api/admin/audit-logs', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
         if (auditRes.ok) {
           const auditData = await auditRes.json();
           if (auditData.logs) setAuditLogs(auditData.logs);
         }
       } catch (err) {
         console.error('Admin init error:', err);
-        router.push('/auth');
+        window.location.href = '/auth';
       } finally {
         setLoading(false);
       }
@@ -203,8 +226,10 @@ export default function AdminDashboard() {
   };
 
   const handleSignOut = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/auth');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    window.location.href = '/auth';
   };
 
   if (loading || !authed) {
@@ -395,6 +420,87 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Registered Users Section */}
+        <div className="glassPanel usersSection" style={{ marginTop: 24 }}>
+          <div className="panelHeader">
+            <h3>
+              <Users size={18} /> Registered User Accounts ({registeredUsers.length})
+            </h3>
+            <p>Authorized administrator view of user accounts, roles, verification status and activity.</p>
+          </div>
+
+          {registeredUsers.length > 0 ? (
+            <div className="auditTableWrap">
+              <table className="auditTable">
+                <thead>
+                  <tr>
+                    <th>User / Name</th>
+                    <th>Email Address</th>
+                    <th>Assigned Role</th>
+                    <th>Email Verified</th>
+                    <th>Account Status</th>
+                    <th>Registered At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registeredUsers.map((u) => (
+                    <tr key={u.id}>
+                      <td>
+                        <strong>{u.name || 'Anonymous User'}</strong>
+                      </td>
+                      <td>{u.email}</td>
+                      <td>
+                        <span
+                          className={`outcomeBadge ${u.role === 'ADMIN' ? 'badgeSuccess' : 'badgeNeutral'}`}
+                          style={{
+                            background: u.role === 'ADMIN' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(241, 245, 249, 1)',
+                            color: u.role === 'ADMIN' ? '#0f172a' : '#475569',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {u.role}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: u.email_verified ? '#166534' : '#854d0e',
+                          }}
+                        >
+                          {u.email_verified ? (
+                            <>
+                              <CheckCircle size={13} color="#166534" /> Verified
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle size={13} color="#854d0e" /> Pending
+                            </>
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: 13, textTransform: 'capitalize' }}>
+                          {u.account_status || 'active'}
+                        </span>
+                      </td>
+                      <td>
+                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="noAuditLogs">No registered users found.</div>
+          )}
         </div>
 
         {/* Security Audit Log Table */}

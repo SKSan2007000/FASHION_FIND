@@ -1,25 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import {
   Sparkles,
   ArrowRight,
   Search,
   ExternalLink,
   ShieldCheck,
-  Filter,
   Layers,
   Shirt,
   ShoppingBag,
-  SlidersHorizontal,
-  ChevronRight,
   Star,
   Check,
-  Tag,
-  Eye,
-  Lock,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { initialProducts, Product } from '../data';
 import { OCCASIONS_DATA } from '../lib/recommendations';
@@ -34,13 +30,26 @@ const CATEGORY_TABS = [
   { id: 'Accessories', label: 'Accessories' },
 ];
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedColor, setSelectedColor] = useState('All');
   const [selectedGender, setSelectedGender] = useState<'ALL' | 'MEN' | 'WOMEN'>('ALL');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Sync search param (e.g. ?gender=MEN)
+  useEffect(() => {
+    const g = searchParams.get('gender');
+    if (g === 'MEN') {
+      setSelectedGender('MEN');
+      setActiveTab('Men');
+    } else if (g === 'WOMEN') {
+      setSelectedGender('WOMEN');
+      setActiveTab('Women');
+    }
+  }, [searchParams]);
 
   // Load products from API / DB
   useEffect(() => {
@@ -137,6 +146,21 @@ export default function Home() {
     return products.slice(0, 3);
   }, [products]);
 
+  // Separate Men and Women products for dedicated sections
+  const menProducts = useMemo(() => {
+    return products.filter((p) => {
+      const g = normalizeProductGender(p);
+      return g === 'MEN' || g === 'UNISEX';
+    });
+  }, [products]);
+
+  const womenProducts = useMemo(() => {
+    return products.filter((p) => {
+      const g = normalizeProductGender(p);
+      return g === 'WOMEN' || g === 'UNISEX';
+    });
+  }, [products]);
+
   return (
     <main className="homePage">
       {/* 1. HERO SECTION */}
@@ -184,7 +208,7 @@ export default function Home() {
                       href={products[0].affiliateUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn btnDark"
+                      className="btn btnShop"
                     >
                       Shop on Amazon <ExternalLink size={14} />
                     </a>
@@ -243,7 +267,7 @@ export default function Home() {
 
           <div className="productGrid">
             {trendingProducts.map((product) => (
-              <div key={product.id} className="productCard glassPanel">
+              <div key={product.id} className="productCard">
                 <div className="productImageContainer">
                   <img src={product.image} alt={product.title} />
                   <span className="categoryBadge">{product.category}</span>
@@ -291,12 +315,12 @@ export default function Home() {
                 <Layers size={14} /> FULL DISCOVERY
               </span>
               <h2>Explore The Catalog</h2>
-              <p>Search by title, brand, specifications, category, or color.</p>
+              <p>Search by title, brand, specifications, category, gender, or color.</p>
             </div>
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="searchFilterContainer glassPanel">
+          <div className="searchFilterContainer">
             <div className="searchBar">
               <Search size={18} className="searchIcon" />
               <input
@@ -373,7 +397,7 @@ export default function Home() {
           {filteredProducts.length > 0 ? (
             <div className="productGrid">
               {filteredProducts.map((product) => (
-                <div key={product.id} className="productCard glassPanel">
+                <div key={product.id} className="productCard">
                   <div className="productImageContainer">
                     <img src={product.image} alt={product.title} />
                     <span className="categoryBadge">{product.category}</span>
@@ -413,7 +437,7 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <div className="emptyState glassPanel">
+            <div className="emptyState">
               <h3>No products found</h3>
               <p>Try adjusting your search query, gender filter, or category selection.</p>
               <button
@@ -435,8 +459,8 @@ export default function Home() {
       {/* 5. AFFILIATE DISCLOSURE BANNER */}
       <section className="disclosureSection">
         <div className="shell">
-          <div className="disclosureBanner glassPanel">
-            <ShieldCheck size={20} className="textMuted" />
+          <div className="disclosureBanner">
+            <ShieldCheck size={22} className="textMuted" style={{ color: '#2563eb', flexShrink: 0, marginTop: 2 }} />
             <div className="disclosureText">
               <strong>Transparent Affiliate Disclosure</strong>
               <p>
@@ -481,5 +505,13 @@ export default function Home() {
         </div>
       </footer>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="shell" style={{ padding: '60px 0', textAlign: 'center' }}>Loading FashionFind…</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

@@ -10,9 +10,9 @@ import {
   LogOut,
   ShieldCheck,
   Bookmark,
-  Sliders,
-  Calendar,
   CheckCircle,
+  AlertCircle,
+  Mail,
   ExternalLink,
 } from 'lucide-react';
 import { UserPreferences } from '../../data';
@@ -23,26 +23,34 @@ export default function AccountPage() {
     email: string;
     name?: string | null;
     role: string;
+    email_verified?: boolean;
   } | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     async function loadAccount() {
       try {
-        const meRes = await fetch('/api/auth/me');
+        const meRes = await fetch('/api/auth/me', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
         const meData = await meRes.json();
 
-        if (!meData.authenticated || !meData.user) {
-          router.push('/auth');
+        if (!meRes.ok || !meData.authenticated || !meData.user) {
+          window.location.href = '/auth';
           return;
         }
 
         setUserData(meData.user);
 
         // Fetch user preferences
-        const prefRes = await fetch('/api/preferences');
+        const prefRes = await fetch('/api/preferences', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
         if (prefRes.ok) {
           const prefData = await prefRes.json();
           if (prefData.preferences) {
@@ -51,7 +59,7 @@ export default function AccountPage() {
         }
       } catch (err) {
         console.error('Account load error:', err);
-        router.push('/auth');
+        window.location.href = '/auth';
       } finally {
         setIsLoading(false);
       }
@@ -63,9 +71,27 @@ export default function AccountPage() {
   const handleSignOut = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
-    } catch (err) {
-      console.error('Logout error:', err);
+    } catch (e) {}
+    window.location.href = '/';
+  };
+
+  const handleResendVerification = async () => {
+    if (!userData?.email) return;
+    setResendStatus('Sending verification link…');
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userData.email }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResendStatus('Verification dispatch processed. Please check your inbox or server logs.');
+      } else {
+        setResendStatus(data.error || 'Failed to resend verification.');
+      }
+    } catch (e) {
+      setResendStatus('Failed to communicate with server.');
     }
   };
 
@@ -109,9 +135,49 @@ export default function AccountPage() {
             <div className="profileMeta">
               <h2>{userData.name || 'Fashion Explorer'}</h2>
               <span className="profileEmail">{userData.email}</span>
-              <span className={`roleBadge ${userData.role === 'ADMIN' ? 'adminRole' : 'userRole'}`}>
-                {userData.role} ACCOUNT
-              </span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                <span className={`roleBadge ${userData.role === 'ADMIN' ? 'adminRole' : 'userRole'}`}>
+                  {userData.role} ACCOUNT
+                </span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: userData.email_verified ? '#15803d' : '#854d0e',
+                    background: userData.email_verified ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
+                    padding: '3px 8px',
+                    borderRadius: 999,
+                  }}
+                >
+                  {userData.email_verified ? (
+                    <>
+                      <CheckCircle size={12} color="#15803d" /> Verified
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={12} color="#854d0e" /> Verification Pending
+                    </>
+                  )}
+                </span>
+              </div>
+
+              {!userData.email_verified && (
+                <div style={{ marginTop: 12 }}>
+                  <button
+                    onClick={handleResendVerification}
+                    className="btn btnLight"
+                    style={{ fontSize: 12, padding: '6px 12px' }}
+                  >
+                    <Mail size={13} /> Resend Verification
+                  </button>
+                  {resendStatus && (
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>{resendStatus}</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

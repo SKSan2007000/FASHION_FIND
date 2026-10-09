@@ -197,6 +197,83 @@ async function runAllTests() {
   assert(allowedCount === 3, 'Rate limiter strictly caps requests at max limit (3/3 allowed)');
 
   // ----------------------------------------------------
+  // GROUP 6: EMAIL VERIFICATION & PASSWORD RESET TOKENS
+  // ----------------------------------------------------
+  console.log('\n--- GROUP 6: Verification & Password Recovery Flow ---');
+  const { createVerificationToken, consumeVerificationToken } = await import('./lib/db');
+  const { resetPasswordWithToken, verifyEmailWithToken, registerUser } = await import('./lib/auth');
+
+  // Password confirmation mismatch test
+  const mismatchReg = await registerUser({
+    email: 'mismatch@example.com',
+    password: 'Password123!',
+    confirmPassword: 'DifferentPassword123!',
+  });
+  assert(mismatchReg.error === 'Password and password confirmation do not match.', 'Registration rejects mismatching confirmPassword');
+
+  // Short password test
+  const shortPassReg = await registerUser({
+    email: 'short@example.com',
+    password: '123',
+    confirmPassword: '123',
+  });
+  assert(shortPassReg.error === 'Password must be at least 8 characters long.', 'Registration rejects password shorter than 8 characters');
+
+  // Register a genuine test user with valid UUID
+  const testUserEmail = `tester-${Date.now()}@fashionfind.internal`;
+  const regResult = await registerUser({
+    email: testUserEmail,
+    password: 'InitialPassword2026!',
+    confirmPassword: 'InitialPassword2026!',
+    name: 'Token Test User',
+  });
+  assert(regResult.user !== null, `Registered test user for verification flow: ${testUserEmail}`);
+  const testUserId = regResult.user!.id;
+
+  // Single-use email verification token test
+  const { rawToken } = await createVerificationToken({
+    userId: testUserId,
+    tokenType: 'EMAIL_VERIFICATION',
+    expiryMinutes: 60,
+  });
+  assert(!!rawToken && rawToken.length === 64, 'Generated 32-byte (64 hex char) random raw verification token');
+
+  // First consumption succeeds
+  const firstConsume = await consumeVerificationToken({
+    rawToken,
+    tokenType: 'EMAIL_VERIFICATION',
+  });
+  assert(firstConsume.valid && firstConsume.userId === testUserId, 'First consumption of verification token succeeds');
+
+  // Second consumption fails (single-use enforcement)
+  const secondConsume = await consumeVerificationToken({
+    rawToken,
+    tokenType: 'EMAIL_VERIFICATION',
+  });
+  assert(!secondConsume.valid && Boolean(secondConsume.error?.includes('already been used')), 'Second consumption of token rejected (Single-use enforced)');
+
+  // Password Reset Token Flow
+  const { rawToken: resetToken } = await createVerificationToken({
+    userId: testUserId,
+    tokenType: 'PASSWORD_RESET',
+    expiryMinutes: 60,
+  });
+  const resetResult = await resetPasswordWithToken({
+    token: resetToken,
+    newPassword: 'NewSecurePassword2026!',
+    confirmPassword: 'NewSecurePassword2026!',
+  });
+  assert(resetResult.success === true, 'Password reset with valid token succeeds');
+
+  // Re-using password reset token must fail
+  const replayReset = await resetPasswordWithToken({
+    token: resetToken,
+    newPassword: 'AnotherPassword2026!',
+    confirmPassword: 'AnotherPassword2026!',
+  });
+  assert(replayReset.success === false, 'Replaying consumed password reset token is prevented');
+
+  // ----------------------------------------------------
   // SUMMARY
   // ----------------------------------------------------
   console.log('\n========================================================');

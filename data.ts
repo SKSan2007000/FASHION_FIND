@@ -44,6 +44,9 @@ export type User = {
   name?: string | null;
   role: UserRole;
   account_status: string;
+  email_verified?: boolean;
+  email_verified_at?: string;
+  last_login_at?: string;
   created_at?: string;
   updated_at?: string;
 };

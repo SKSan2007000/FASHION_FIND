@@ -14,13 +14,17 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { email, password, name } = body;
+    const { email, password, confirmPassword, name } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 });
     }
 
-    const result = await registerUser({ email, password, name, role: 'USER' });
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return NextResponse.json({ error: 'Password and password confirmation do not match.' }, { status: 400 });
+    }
+
+    const result = await registerUser({ email, password, confirmPassword, name, role: 'USER' });
 
     if (result.error || !result.user || !result.token) {
       return NextResponse.json({ error: result.error || 'Registration failed.' }, { status: 400 });
@@ -33,7 +37,9 @@ export async function POST(req: Request) {
         email: result.user.email,
         name: result.user.name,
         role: result.user.role,
+        email_verified: result.user.email_verified,
       },
+      emailResult: result.emailResult,
     });
 
     response.cookies.set('fashionfind_session', result.token, {
@@ -50,3 +56,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
+

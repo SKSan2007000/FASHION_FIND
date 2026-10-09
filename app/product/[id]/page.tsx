@@ -1,62 +1,36 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import React from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, ShieldCheck, Sparkles, Tag, Check, Info } from 'lucide-react';
-import { initialProducts, Product } from '../../../data';
+import type { Metadata } from 'next';
+import { ArrowLeft, ExternalLink, ShieldCheck, Sparkles, Info } from 'lucide-react';
+import { getProductById } from '@/lib/db';
+import { initialProducts, Product } from '@/data';
 
-export default function ProductDetailPage({
-  params,
-}: {
+interface ProductPageProps {
   params: Promise<{ id: string }>;
-}) {
-  const [product, setProduct] = useState<Product | null>(null);
-  const [id, setId] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+}
 
-  useEffect(() => {
-    params.then(async (resolved) => {
-      setId(resolved.id);
-      try {
-        const res = await fetch('/api/products');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.products) {
-            const found = data.products.find((p: Product) => p.id === resolved.id);
-            if (found) {
-              setProduct(found);
-              setIsLoading(false);
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch product from API:', err);
-      }
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const product = (await getProductById(id)) || initialProducts.find((p) => p.id === id);
 
-      // Fallback
-      const fallback = initialProducts.find((p) => p.id === resolved.id) || null;
-      setProduct(fallback);
-      setIsLoading(false);
+  if (!product) {
+    return {
+      title: 'Product Not Found — FashionFind',
+    };
+  }
 
-      // Record product view event
-      fetch('/api/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'product_view', productId: resolved.id }),
-      }).catch(() => {});
-    });
-  }, [params]);
+  return {
+    title: `${product.title} — FashionFind`,
+    description: product.description || `Buy ${product.title} on Amazon via FashionFind.`,
+  };
+}
 
-  if (isLoading || !id) {
-    return (
-      <main className="detail">
-        <div className="shell">
-          <div className="glassPanel accountLoading">Loading product details…</div>
-        </div>
-      </main>
-    );
+export default async function ProductDetailPage({ params }: ProductPageProps) {
+  const { id } = await params;
+  let product: Product | null = await getProductById(id);
+
+  if (!product) {
+    product = initialProducts.find((p) => p.id === id) || null;
   }
 
   if (!product) {
@@ -85,14 +59,14 @@ export default function ProductDetailPage({
           <Link href="/" className="btn btnLight">
             <ArrowLeft size={15} /> Back to Catalog
           </Link>
-          <Link href="/style" className="btn btnLight">
+          <Link href={`/style?gender=${product.gender || 'MEN'}`} className="btn btnLight">
             <Sparkles size={15} /> Style with this Item
           </Link>
         </div>
 
         <div className="detailGrid" style={{ marginTop: 24 }}>
           {/* Product Image */}
-          <div className="detailImageWrap glassPanel">
+          <div className="detailImageWrap">
             <img src={product.image} alt={product.title} className="detailMainImg" />
           </div>
 
@@ -120,16 +94,6 @@ export default function ProductDetailPage({
                   href={product.affiliateUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => {
-                    fetch('/api/track', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        type: 'affiliate_click',
-                        productId: product.id,
-                      }),
-                    }).catch(() => {});
-                  }}
                 >
                   Shop on Amazon <ExternalLink size={16} />
                 </a>
@@ -205,7 +169,7 @@ export default function ProductDetailPage({
 
             {/* Retailer Disclaimer */}
             <div className="retailerDisclaimer">
-              <Info size={16} />
+              <Info size={16} style={{ color: '#2563eb', flexShrink: 0, marginTop: 2 }} />
               <span>
                 FashionFind is an affiliate discovery engine. Product pricing, sizing availability, delivery, and stock
                 are managed by Amazon and the respective merchant.
