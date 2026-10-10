@@ -21,7 +21,14 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const host = process.env.DB_HOST || 'localhost';
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.POSTGRES_PRISMA_URL;
+
+let host = process.env.DB_HOST || '127.0.0.1';
+if (host === 'localhost') host = '127.0.0.1';
 const port = parseInt(process.env.DB_PORT || '5432', 10);
 const database = process.env.DB_NAME || 'fashionfind_db';
 const user = process.env.DB_USER || 'postgres';
@@ -29,36 +36,46 @@ const password = process.env.DB_PASSWORD ?? process.env.PGPASSWORD;
 
 async function migrate() {
   console.log('========================================================');
-  console.log('FASHIONFIND POSTGRESQL 17 MIGRATION & CONNECTION CHECK');
+  console.log('FASHIONFIND POSTGRESQL MIGRATION & CONNECTION CHECK');
   console.log('========================================================\n');
 
-  console.log(`Connecting to host: ${host}:${port} as user "${user}"...`);
+  let targetClient;
 
-  // Step A: Connect to default postgres DB to verify server and ensure fashionfind_db exists
-  let rootClient = new Client({ host, port, user, password: password || '', database: 'postgres' });
-  try {
-    await rootClient.connect();
-    console.log('✓ Connected to PostgreSQL server.');
+  if (connectionString) {
+    const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+    console.log('Connecting using hosted connection string (DATABASE_URL)...');
+    targetClient = new Client({
+      connectionString,
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
+    });
+    await targetClient.connect();
+    console.log('✓ Connected to hosted PostgreSQL database.');
+  } else {
+    console.log(`Connecting to host: ${host}:${port} as user "${user}"...`);
 
-    const checkDb = await rootClient.query("SELECT 1 FROM pg_database WHERE datname = $1", [database]);
-    if (checkDb.rows.length === 0) {
-      console.log(`Creating database "${database}"...`);
-      await rootClient.query(`CREATE DATABASE ${database}`);
-      console.log(`✓ Database "${database}" created.`);
-    } else {
-      console.log(`✓ Database "${database}" verified existing.`);
+    // Step A: Connect to default postgres DB to verify server and ensure fashionfind_db exists
+    let rootClient = new Client({ host, port, user, password: password || '', database: 'postgres' });
+    try {
+      await rootClient.connect();
+      console.log('✓ Connected to PostgreSQL server.');
+
+      const checkDb = await rootClient.query("SELECT 1 FROM pg_database WHERE datname = $1", [database]);
+      if (checkDb.rows.length === 0) {
+        console.log(`Creating database "${database}"...`);
+        await rootClient.query(`CREATE DATABASE ${database}`);
+        console.log(`✓ Database "${database}" created.`);
+      } else {
+        console.log(`✓ Database "${database}" verified existing.`);
+      }
+      await rootClient.end();
+    } catch (err) {
+      console.warn(`Note on root DB connection: ${err.message}`);
     }
-    await rootClient.end();
-  } catch (err) {
-    console.warn(`Note on root DB connection: ${err.message}`);
-    // Try connecting directly to target DB
-  }
 
-  // Step B: Connect to target database and run schema migrations
-  const targetClient = new Client({ host, port, user, password: password || '', database });
-  try {
+    targetClient = new Client({ host, port, user, password: password || '', database });
     await targetClient.connect();
     console.log(`✓ Connected directly to target database "${database}".`);
+  }
 
     console.log('\nApplying schema migrations...');
 

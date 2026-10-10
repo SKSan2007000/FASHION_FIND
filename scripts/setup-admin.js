@@ -90,86 +90,93 @@ async function setupAdmin() {
     process.env.DATABASE_URL ||
     process.env.POSTGRES_URL ||
     (user && database && dbPassword && String(dbPassword).trim().length > 0)
-  );
-
   if (hasPgConfig) {
     let client;
-    if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
-      client = new Client({ connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL });
+    const connStr =
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_URL_NON_POOLING ||
+      process.env.POSTGRES_PRISMA_URL;
+
+    if (connStr) {
+      const isLocal = connStr.includes('localhost') || connStr.includes('127.0.0.1');
+      client = new Client({
+        connectionString: connStr,
+        ssl: isLocal ? undefined : { rejectUnauthorized: false },
+      });
     } else {
-      client = new Client({ host, port, user, password: String(dbPassword), database });
+      let h = host;
+      if (h === 'localhost') h = '127.0.0.1';
+      client = new Client({ host: h, port, user, password: String(dbPassword), database });
     }
 
     try {
       await client.connect();
       console.log('✓ Connected to PostgreSQL database.');
 
+      // Ensure roles table exists
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS public.roles (
+          id smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+          name varchar(50) UNIQUE NOT NULL
+        );
+        INSERT INTO public.roles (name) VALUES ('USER'), ('ADMIN') ON CONFLICT (name) DO NOTHING;
+      `);
+
       // Ensure users table exists
       await client.query(`
         CREATE TABLE IF NOT EXISTS public.users (
-          id text PRIMARY KEY,
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
           email text UNIQUE NOT NULL,
           password_hash text NOT NULL,
           name text,
           role text NOT NULL DEFAULT 'USER',
-          account_status text NOT NULL DEFAULT 'active',
+          status text NOT NULL DEFAULT 'active',
+          email_verified boolean NOT NULL DEFAULT true,
           created_at timestamptz DEFAULT now(),
           updated_at timestamptz DEFAULT now()
         );
       `);
 
-      // Ensure audit_logs table exists
+      // Ensure user_roles table exists
       await client.query(`
-        CREATE TABLE IF NOT EXISTS public.audit_logs (
-          id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-          actor_id text,
-          actor_email text,
-          action text NOT NULL,
-          target_resource text,
-          outcome text NOT NULL,
-          details jsonb DEFAULT '{}'::jsonb,
-          created_at timestamptz DEFAULT now()
+        CREATE TABLE IF NOT EXISTS public.user_roles (
+          user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+          role_id smallint NOT NULL REFERENCES public.roles(id) ON DELETE CASCADE,
+          assigned_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (user_id, role_id)
         );
       `);
 
+      // Hash password with bcrypt (12 rounds)
+      const passwordHash = await bcrypt.hash(password, 12);
+
       // Check if user already exists
-      const existingRes = await client.query('SELECT id, email, role FROM public.users WHERE email = $1', [normalizedEmail]);
+      const existingRes = await client.query('SELECT id, email, role FROM public.users WHERE LOWER(email) = $1', [normalizedEmail]);
 
+      let adminId;
       if (existingRes.rows.length > 0) {
-        const existing = existingRes.rows[0];
-        if (existing.role === 'ADMIN') {
-          console.log(`✓ Administrator account already established for ${normalizedEmail} with ADMIN role.`);
-          console.log('✓ Setup is idempotent. Existing account preserved without modification.');
-        } else {
-          // Promote existing user to ADMIN
-          await client.query(
-            "UPDATE public.users SET role = 'ADMIN', account_status = 'active', updated_at = now() WHERE email = $1",
-            [normalizedEmail]
-          );
-          console.log(`✓ Existing user ${normalizedEmail} successfully promoted to validated ADMIN role.`);
-
-          await client.query(`
-            INSERT INTO public.audit_logs (actor_email, action, target_resource, outcome, details)
-            VALUES ($1, 'ADMIN_PROMOTED_CLI', $2, 'SUCCESS', '{"method":"setup-admin.js"}'::jsonb)
-          `, [normalizedEmail, existing.id]);
-        }
+        adminId = existingRes.rows[0].id;
+        await client.query(
+          "UPDATE public.users SET password_hash = $1, role = 'ADMIN', status = 'active', email_verified = true, updated_at = now() WHERE id = $2",
+          [passwordHash, adminId]
+        );
+        console.log(`✓ Existing user ${normalizedEmail} successfully updated with ADMIN role and new password hash.`);
       } else {
-        // Hash password with bcrypt (12 rounds)
-        const passwordHash = await bcrypt.hash(password, 12);
-        const adminId = crypto.randomUUID();
-
+        adminId = crypto.randomUUID();
         await client.query(`
-          INSERT INTO public.users (id, email, password_hash, name, role, account_status, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, 'ADMIN', 'active', now(), now())
+          INSERT INTO public.users (id, email, password_hash, name, role, status, email_verified, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, 'ADMIN', 'active', true, now(), now())
         `, [adminId, normalizedEmail, passwordHash, 'Administrator']);
-
         console.log(`✓ Initial administrator successfully created in database with role ADMIN.`);
-
-        await client.query(`
-          INSERT INTO public.audit_logs (actor_id, actor_email, action, target_resource, outcome, details)
-          VALUES ($1, $2, 'ADMIN_CREATED_CLI', $1, 'SUCCESS', '{"method":"setup-admin.js"}'::jsonb)
-        `, [adminId, normalizedEmail]);
       }
+
+      // Ensure role mapping in user_roles table
+      const roleRow = await client.query("SELECT id FROM public.roles WHERE name = 'ADMIN'");
+      const adminRoleId = roleRow.rows[0]?.id || 2;
+      await client.query('DELETE FROM public.user_roles WHERE user_id = $1', [adminId]);
+      await client.query('INSERT INTO public.user_roles (user_id, role_id) VALUES ($1, $2)', [adminId, adminRoleId]);
+      console.log(`✓ Assigned role_id ${adminRoleId} (ADMIN) in user_roles table for user ${adminId}.`);
 
       await client.end();
       console.log('\n========================================================');

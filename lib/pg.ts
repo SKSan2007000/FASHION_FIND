@@ -43,14 +43,21 @@ export function getPgPool(): Pool | null {
 
   loadLocalEnv();
 
-  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const connectionString =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.SUPABASE_DB_URL;
 
   if (connectionString) {
+    const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
     pool = new Pool({
       connectionString,
-      ssl: process.env.NODE_ENV === 'production' && !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1') ? { rejectUnauthorized: false } : undefined,
-      max: 10,
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
+      max: process.env.NODE_ENV === 'production' ? 4 : 10,
       idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
     return pool;
   }
@@ -88,7 +95,15 @@ export function getPgPool(): Pool | null {
 
 export function isPgConfigured(): boolean {
   loadLocalEnv();
-  if (process.env.DATABASE_URL || process.env.POSTGRES_URL) return true;
+  if (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.SUPABASE_DB_URL
+  ) {
+    return true;
+  }
   const pwd = process.env.DB_PASSWORD ?? process.env.PGPASSWORD;
   return Boolean(
     process.env.DB_USER &&
