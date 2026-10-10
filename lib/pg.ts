@@ -4,37 +4,37 @@ import path from 'path';
 
 // Helper to safely load .env.local if not already in process.env
 function loadLocalEnv() {
-  const envPath = path.resolve(process.cwd(), '.env.local');
-  if (fs.existsSync(envPath)) {
-    try {
-      const content = fs.readFileSync(envPath, 'utf8');
-      content.split('\n').forEach((line) => {
-        const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith('#')) {
-          const match = trimmed.match(/^([A-Za-z0-9_]+)=(.*)$/);
-          if (match && !process.env[match[1]]) {
-            // Strip optional quotes
-            let val = match[2].trim();
-            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-              val = val.slice(1, -1);
+  const candidatePaths = [
+    path.resolve(process.cwd(), '.env.local'),
+    path.resolve(process.cwd(), 'fashionfind', '.env.local'),
+    path.resolve(__dirname, '..', '.env.local'),
+    path.resolve(__dirname, '..', '..', '.env.local'),
+  ];
+  for (const envPath of candidatePaths) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, 'utf8');
+        content.split('\n').forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const match = trimmed.match(/^([A-Za-z0-9_]+)=(.*)$/);
+            if (match && !process.env[match[1]]) {
+              let val = match[2].trim();
+              if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                val = val.slice(1, -1);
+              }
+              process.env[match[1]] = val;
             }
-            process.env[match[1]] = val;
           }
-        }
-      });
-    } catch (e) {
-      console.warn('Could not read .env.local:', e);
+        });
+      } catch (e) {
+        console.warn('Could not read .env.local from ' + envPath, e);
+      }
     }
   }
 }
 
 loadLocalEnv();
-
-const hasDirectPg = Boolean(
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL ||
-  (process.env.DB_USER && process.env.DB_NAME && (process.env.DB_PASSWORD !== undefined || process.env.PGPASSWORD !== undefined))
-);
 
 let pool: Pool | null = null;
 
@@ -48,14 +48,15 @@ export function getPgPool(): Pool | null {
   if (connectionString) {
     pool = new Pool({
       connectionString,
-      ssl: process.env.NODE_ENV === 'production' && !connectionString.includes('localhost') ? { rejectUnauthorized: false } : undefined,
+      ssl: process.env.NODE_ENV === 'production' && !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1') ? { rejectUnauthorized: false } : undefined,
       max: 10,
       idleTimeoutMillis: 30000,
     });
     return pool;
   }
 
-  const host = process.env.DB_HOST || 'localhost';
+  let host = process.env.DB_HOST || '127.0.0.1';
+  if (host === 'localhost') host = '127.0.0.1'; // Ensure IPv4 loopback on Windows to avoid ::1 ECONNREFUSED
   const port = parseInt(process.env.DB_PORT || '5432', 10);
   const database = process.env.DB_NAME || 'fashionfind_db';
   const user = process.env.DB_USER || 'postgres';

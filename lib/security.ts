@@ -131,11 +131,14 @@ if (typeof setInterval !== 'undefined') {
  * In production, this should come from process.env.SESSION_SECRET or process.env.NEXTAUTH_SECRET.
  * Falls back to a deterministic machine-derived secret if not explicitly configured in dev.
  */
-const SESSION_SECRET =
-  process.env.SESSION_SECRET ||
-  process.env.NEXTAUTH_SECRET ||
-  process.env.SUPABASE_ANON_KEY ||
-  'fashionfind-secure-session-key-v2-prod-2026';
+function getSessionSecret(): string {
+  return (
+    process.env.SESSION_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    process.env.SUPABASE_ANON_KEY ||
+    'fashionfind-secure-session-key-v2-prod-2026'
+  );
+}
 
 export interface SessionPayload {
   userId: string;
@@ -159,7 +162,7 @@ export function signSessionToken(payload: Omit<SessionPayload, 'iat' | 'exp'>, e
 
   const payloadStr = Buffer.from(JSON.stringify(fullPayload)).toString('base64url');
   const signature = crypto
-    .createHmac('sha256', SESSION_SECRET)
+    .createHmac('sha256', getSessionSecret())
     .update(payloadStr)
     .digest('base64url');
 
@@ -177,7 +180,7 @@ export function verifySessionToken(token: string | null | undefined): SessionPay
 
   const [payloadStr, signature] = parts;
   const expectedSignature = crypto
-    .createHmac('sha256', SESSION_SECRET)
+    .createHmac('sha256', getSessionSecret())
     .update(payloadStr)
     .digest('base64url');
 

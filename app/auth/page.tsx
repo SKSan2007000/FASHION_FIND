@@ -36,7 +36,7 @@ export default function AuthPage() {
     setSimulatedLink(null);
     setIsLoading(true);
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !password) {
       setErrorMsg('Please enter your email and password.');
       setIsLoading(false);

@@ -674,7 +674,7 @@ export async function updateUserLastLogin(userId: string): Promise<void> {
 
   if (isPgConfigured()) {
     try {
-      await pgQuery(`UPDATE public.users SET last_login_at = $1 WHERE id = $2`, [now, userId]);
+      await pgQuery(`UPDATE public.users SET last_login_at = $1 WHERE id = $2::uuid`, [now, userId]);
     } catch (e) {
       console.error('PostgreSQL updateUserLastLogin error:', e);
     }

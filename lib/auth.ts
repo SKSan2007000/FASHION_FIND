@@ -121,11 +121,14 @@ export async function loginUser(
   const email = normalizeEmail(emailInput);
 
   if (!email || !passwordInput) {
+    console.warn('[AUTH] Login rejected: missing email or password');
     return { user: null, error: 'Email and password are required.' };
   }
 
+  console.log(`[AUTH] Processing login attempt for: ${email}`);
   const record = await findUserByEmail(email);
   if (!record) {
+    console.warn(`[AUTH] Login failed: user not found in database for ${email}`);
     await recordAuditLog({
       actor_email: email,
       action: 'LOGIN_FAILED',
@@ -137,6 +140,7 @@ export async function loginUser(
 
   const isValid = await verifyPassword(passwordInput, record.passwordHash);
   if (!isValid) {
+    console.warn(`[AUTH] Login failed: password mismatch for user ${email} (id: ${record.user.id})`);
     await recordAuditLog({
       actor_id: record.user.id,
       actor_email: record.user.email,
@@ -149,6 +153,7 @@ export async function loginUser(
   }
 
   if (record.user.account_status !== 'active') {
+    console.warn(`[AUTH] Login failed: account disabled for user ${email} (status: ${record.user.account_status})`);
     return { user: null, error: 'This account has been disabled.' };
   }
 
@@ -161,6 +166,8 @@ export async function loginUser(
     name: record.user.name,
     role: record.user.role,
   });
+
+  console.log(`[AUTH] Login SUCCESS for ${email} with effective role: ${record.user.role}`);
 
   await recordAuditLog({
     actor_id: record.user.id,
