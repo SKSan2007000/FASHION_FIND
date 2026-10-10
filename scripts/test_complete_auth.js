@@ -50,7 +50,7 @@ async function runDirectAuthValidation() {
   await client.connect();
 
   // 1. Check Administrator Account
-  const adminEmail = (process.env.ADMIN_EMAIL || 'sky@gmail.com').toLowerCase().trim();
+  const adminEmail = (process.env.ADMIN_EMAIL || 'bestsanthosh2007@gmail.com').toLowerCase().trim();
   const adminQuery = await client.query(
     `SELECT u.id, u.email, u.role, u.email_verified, r.name as relational_role
      FROM public.users u
